@@ -120,13 +120,22 @@ async function connectToWA() {
               require("./plugins/" + plugin)
           }
      })
+  console.log('Bot running')
   let up = `
 ┏──────⊷
 ┊ *[ɴᴊᴀʙᴜʟᴏ ᴊʙ ᴄᴏɴɴᴇᴄᴛᴇᴅ ᴛᴏ ʟɪɴᴋᴇᴅ ᴅᴇᴠɪᴄᴇ]*
 ┗──────────────⊷`;
-conn.sendMessage(conn.user.id, { image: { url: `https://files.catbox.moe/0mmreh.jpg` }, caption: up })
-  }
-  })
+conn.sendMessage(conn.user.id, { 
+     image: { url: `https://files.catbox.moe/avqa3c.jpg` }, 
+    caption: up 
+   })     
+	initialConnection = false
+   } else {
+     console.log(chalk.blue("♻️ Connection reestablished after restart."))
+       }
+       }
+     })
+        conn.ev.on('creds.update', saveCreds)
   conn.ev.on('creds.update', saveCreds)
 
   //==============================
