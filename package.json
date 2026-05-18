@@ -1,13 +1,13 @@
 
 {
-  "name": "NjabuloJb-max",
+  "name": "njabulo-ui",
   "version": "4.5.0",
   "description": "A WhatsApp Bot Created By NjabuloJb",
   "main": "index.js",
   "scripts": {
-    "start": "pm2 start index.js --deep-monitoring --attach --name NjabuloJb-max",
-    "stop": "pm2 stop NjabuloJb-max",
-    "restart": "pm2 restart NjabuloJb-max"
+    "start": "pm2 start index.js --deep-monitoring --attach --name njabulo-ui",
+    "stop": "pm2 stop njabulo-ui",
+    "restart": "pm2 restart njabulo-ui"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.18",
