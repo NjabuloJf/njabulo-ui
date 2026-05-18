@@ -64,16 +64,39 @@ const {
   // Clear the temp directory every 5 minutes
   setInterval(clearTempDir, 5 * 60 * 1000);
   
-  //===================SESSION-AUTH============================
+  //===================SESSION-AUTH (FIXED FOR BASE64)============================
 if (!fs.existsSync(__dirname + '/sessions/creds.json')) {
 if(!config.SESSION_ID) return console.log('Please add your session to SESSION_ID env !!')
-const sessdata = config.SESSION_ID.replace("njabulo-jb~", '');
-const filer = File.fromURL(`https://mega.nz/file/${sessdata}`)
-filer.download((err, data) => {
-if(err) throw err
-fs.writeFile(__dirname + '/sessions/creds.json', data, () => {
-console.log("Session downloaded ✅")
-})})}
+
+// Check if session is in Base64 format (contains "njabulo~" prefix)
+if (config.SESSION_ID.startsWith('njabulo~')) {
+    // Extract the Base64 part after the prefix
+    const base64Session = config.SESSION_ID.replace('njabulo~', '');
+    
+    try {
+        // Decode the Base64 string to JSON
+        const sessionJson = Buffer.from(base64Session, 'base64').toString('utf-8');
+        
+        // Parse the JSON and write it to creds.json
+        const sessionData = JSON.parse(sessionJson);
+        fs.writeFileSync(__dirname + '/sessions/creds.json', JSON.stringify(sessionData, null, 2));
+        console.log("Session loaded from Base64 ✅");
+    } catch (err) {
+        console.log("Error decoding Base64 session:", err);
+        return;
+    }
+} else {
+    // Fallback to Mega.nz download for backward compatibility
+    const sessdata = config.SESSION_ID.replace("njabulo-jb~", '');
+    const filer = File.fromURL(`https://mega.nz/file/${sessdata}`)
+    filer.download((err, data) => {
+        if(err) throw err
+        fs.writeFile(__dirname + '/sessions/creds.json', data, () => {
+            console.log("Session downloaded from Mega ✅")
+        });
+    });
+}
+}
 
 const express = require("express");
 const app = express();
@@ -113,7 +136,7 @@ const port = process.env.PORT || 9090;
   console.log('Bot connected to whatsapp ✅')
   
   let up = `┏──────────────⊷
-┊ ɴᴀᴍᴇ : *ɴנɐႦυℓσ נႦ is online*
+┊ ɴᴀᴍᴇ : *ɴנαႦυℓσ נႦ is online*
 ┗──────────────⊷
 ┏ *【 ᴅᴇᴠɪᴄᴇ ᴏɴʟɪɴᴇ 】⇳︎*
 - . ① *ᴘɪɴɢ*
