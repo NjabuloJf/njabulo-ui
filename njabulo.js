@@ -1,6 +1,6 @@
 var commands = [];
 
-function cmd(info, func) {
+function fana(info, func) {
     var data = info;
     data.function = func;
     if (!data.dontAddCommandList) data.dontAddCommandList = false;
@@ -11,12 +11,11 @@ function cmd(info, func) {
     commands.push(data);
     return data;
 }
+
 module.exports = {
-    cmd,
-    AddCommand:cmd,
-    Function:cmd,
-    Module:cmd,
+    fana,
+    AddCommand: fana,
+    Function: fana,
+    Module: fana,
     commands,
 };
-
-
