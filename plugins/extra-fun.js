@@ -1,6 +1,51 @@
 const { cmd } = require("../command");
 const config = require('../config');
 
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "Fun Commands",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
+
 cmd({
   pattern: "compatibility",
   alias: ["friend", "fcheck"],
@@ -9,10 +54,19 @@ cmd({
   react: "💖",
   filename: __filename,
   use: "@tag1 @tag2",
-}, async (conn, mek, m, { args, reply }) => {
+}, async (conn, mek, m, { args, reply, sender, pushname }) => {
   try {
     if (args.length < 2) {
-      return reply("Please mention two users to calculate compatibility.\nUsage: `.compatibility @user1 @user2`");
+      await sendFormattedMessage(
+        conn, 
+        mek.chat, 
+        "💖 *Please mention two users to calculate compatibility*\n\n📌 *Usage:* .compatibility @user1 @user2", 
+        sender, 
+        pushname,
+        "Compatibility - Error",
+        "Missing users"
+      );
+      return;
     }
 
     let user1 = m.mentionedJid[0]; 
@@ -20,61 +74,122 @@ cmd({
 
     const specialNumber = config.DEV ? `${config.DEV}@s.whatsapp.net` : null;
 
-    // Calculate a random compatibility score (between 1 to 1000)
     let compatibilityScore = Math.floor(Math.random() * 1000) + 1;
 
-    // Check if one of the mentioned users is the special number
     if (user1 === specialNumber || user2 === specialNumber) {
-      compatibilityScore = 1000; // Special case for DEV number
-      return reply(`💖 Compatibility between @${user1.split('@')[0]} and @${user2.split('@')[0]}: ${compatibilityScore}+/1000 💖`);
+      compatibilityScore = 1000;
+      await sendFormattedMessage(
+        conn, 
+        mek.chat, 
+        `💖 *Compatibility Result* 💖\n\n@${user1.split('@')[0]} ❤️ @${user2.split('@')[0]}\n\n📊 *Score:* ${compatibilityScore}+/1000\n\n✨ *Special Match!* ✨`, 
+        sender, 
+        pushname,
+        "Compatibility Test",
+        "Special score"
+      );
+      return;
     }
 
-    // Send the compatibility message
-    await conn.sendMessage(mek.chat, {
-      text: `💖 Compatibility between @${user1.split('@')[0]} and @${user2.split('@')[0]}: ${compatibilityScore}/1000 💖`,
-      mentions: [user1, user2],
-    }, { quoted: mek });
+    let loveMessage = "";
+    if (compatibilityScore >= 900) loveMessage = "💖 *Perfect match!* Soulmates detected!";
+    else if (compatibilityScore >= 700) loveMessage = "😍 *Great compatibility!* Strong bond!";
+    else if (compatibilityScore >= 500) loveMessage = "😊 *Good connection!* Can work out!";
+    else if (compatibilityScore >= 300) loveMessage = "🤔 *It's complicated!* Needs effort!";
+    else loveMessage = "💔 *Not the best match!* Maybe just friends!";
+
+    await sendFormattedMessage(
+      conn, 
+      mek.chat, 
+      `💖 *Compatibility Result* 💖\n\n@${user1.split('@')[0]} ❤️ @${user2.split('@')[0]}\n\n📊 *Score:* ${compatibilityScore}/1000\n\n${loveMessage}`, 
+      sender, 
+      pushname,
+      "Compatibility Test",
+      `${compatibilityScore}/1000`
+    );
 
   } catch (error) {
     console.log(error);
-    reply(`❌ Error: ${error.message}`);
+    await sendFormattedMessage(
+      conn, 
+      mek.chat, 
+      `❌ *Error:* ${error.message}`, 
+      sender, 
+      pushname,
+      "Error",
+      "Command failed"
+    );
   }
 });
 
-  cmd({
+cmd({
   pattern: "aura",
   desc: "Calculate aura score of a user.",
   category: "fun",
   react: "💀",
   filename: __filename,
   use: "@tag",
-}, async (conn, mek, m, { args, reply }) => {
+}, async (conn, mek, m, { args, reply, sender, pushname }) => {
   try {
     if (args.length < 1) {
-      return reply("Please mention a user to calculate their aura.\nUsage: `.aura @user`");
+      await sendFormattedMessage(
+        conn, 
+        mek.chat, 
+        "💀 *Please mention a user to calculate their aura*\n\n📌 *Usage:* .aura @user", 
+        sender, 
+        pushname,
+        "Aura - Error",
+        "Missing user"
+      );
+      return;
     }
 
     let user = m.mentionedJid[0]; 
     const specialNumber = config.DEV ? `${config.DEV}@s.whatsapp.net` : null;
 
-    // Calculate a random aura score (between 1 to 1000)
     let auraScore = Math.floor(Math.random() * 1000) + 1;
 
-    // Check if the mentioned user is the special number
     if (user === specialNumber) {
-      auraScore = 999999; // Special case for DEV number
-      return reply(`💀 Aura of @${user.split('@')[0]}: ${auraScore}+ 🗿`);
+      auraScore = 999999;
+      await sendFormattedMessage(
+        conn, 
+        mek.chat, 
+        `💀 *Aura Result* 💀\n\n👤 @${user.split('@')[0]}\n\n📊 *Score:* ${auraScore}+\n\n🗿 *Legendary Aura!* 🗿`, 
+        sender, 
+        pushname,
+        "Aura Test",
+        "Legendary"
+      );
+      return;
     }
 
-    // Send the aura message
-    await conn.sendMessage(mek.chat, {
-      text: `💀 Aura of @${user.split('@')[0]}: ${auraScore}/1000 🗿`,
-      mentions: [user],
-    }, { quoted: mek });
+    let auraMessage = "";
+    if (auraScore >= 900) auraMessage = "💫 *Godly Aura!* Truly legendary!";
+    else if (auraScore >= 700) auraMessage = "✨ *Strong Aura!* Very impressive!";
+    else if (auraScore >= 500) auraMessage = "🌟 *Decent Aura!* Keep going!";
+    else if (auraScore >= 300) auraMessage = "⚡ *Average Aura!* Room for improvement!";
+    else auraMessage = "🍂 *Weak Aura!* Time for a glow up!";
+
+    await sendFormattedMessage(
+      conn, 
+      mek.chat, 
+      `💀 *Aura Result* 💀\n\n👤 @${user.split('@')[0]}\n\n📊 *Score:* ${auraScore}/1000\n\n${auraMessage}`, 
+      sender, 
+      pushname,
+      "Aura Test",
+      `${auraScore}/1000`
+    );
 
   } catch (error) {
     console.log(error);
-    reply(`❌ Error: ${error.message}`);
+    await sendFormattedMessage(
+      conn, 
+      mek.chat, 
+      `❌ *Error:* ${error.message}`, 
+      sender, 
+      pushname,
+      "Error",
+      "Command failed"
+    );
   }
 });
 
@@ -85,7 +200,7 @@ cmd({
     react: "🔥",
     filename: __filename,
     use: "@tag"
-}, async (conn, mek, m, { q, reply }) => {
+}, async (conn, mek, m, { q, reply, sender, pushname }) => {
     let roasts = [
         "Abe bhai, tera IQ wifi signal se bhi kam hai!",
         "Bhai, teri soch WhatsApp status jaisi hai, 24 ghante baad gayab ho jaati hai!",
@@ -95,81 +210,39 @@ cmd({
         "Itna overthink mat kar bhai, teri battery jaldi down ho jayegi!",
         "Teri soch cricket ke match jaisi hai, baarish aate hi band ho jati hai!",
         "Tu VIP hai, 'Very Idiotic Person'!",
-    "Abe bhai, tera IQ wifi signal se bhi kam hai!",
-    "Bhai, teri soch WhatsApp status jaisi hai, 24 ghante baad gayab ho jaati hai!",
-    "Abe tu kis planet se aaya hai, yeh duniya tere jaise aliens ke liye nahi hai!",
-    "Tere dimag mein khojne ka itna kuch hai, lekin koi result nahi milta!",
-    "Teri zindagi WhatsApp status jaisi hai, kabhi bhi delete ho sakti hai!",
-    "Tera style bilkul WiFi password ki tarah hai, sabko pata nahi!",
-    "Abe tu toh wahi hai jo apni zindagi ka plot twist bhi Google karta hai!",
-    "Abe tu toh software update bhi nahi chalne wala, pura hang hai!",
-    "Tere sochne se zyada toh Google search karne mein time waste ho jaata hai!",
-    "Mere paas koi shabdon ki kami nahi hai, bas tujhe roast karne ka mood nahi tha!",
-    "Teri personality toh dead battery jaisi hai, recharge karne ka time aa gaya hai!",
-    "Bhai, teri soch ke liye ek dedicated server hona chahiye!",
-    "Abe tu kaunsa game khel raha hai, jisme har baar fail ho jaata hai?",
-    "Tere jokes bhi software update ki tarah hote hain, baar-baar lagte hain par kaam nahi karte!",
-    "Teri wajah se toh mere phone ka storage bhi full ho jaata hai!",
-    "Abe bhai, tu na ek walking meme ban gaya hai!",
-    "Abe apne aap ko bada smart samajhta hai, par teri brain cells toh overload mein hain!",
-    "Teri wajah se toh humari group chat ko mute karne ka sochna padta hai!",
-    "Abe tere jaise log hamesha apne aap ko hero samajhte hain, par actually toh tum villain ho!",
-    "Tere jaise logon ke liye zindagi mein rewind aur fast forward button hona chahiye!",
-    "Tere mooh se nikla har lafz ek naya bug hai!",
-    "Abe tu apni zindagi ke saath save nahi kar paaya, aur dusron ke liye advice de raha hai!",
-    "Tu apne life ka sabse bada virus hai!",
-    "Abe tu hain ya koi broken app?",
-    "Tere soch ke liye CPU ki zarurat hai, par lagta hai tera CPU khatam ho gaya!",
-    "Abe tu kya kar raha hai, ek walking error message ban gaya hai!",
-    "Teri taareef toh bas lagti hai, par teri asli aukaat toh sabko pata hai!",
-    "Tera brain toh ek broken link ki tarah hai, sab kuch dhundne ke bawajood kuch nahi milta!",
-    "Bhai, tujhe dekh ke toh lagta hai, Netflix bhi teri wajah se crash ho gaya!",
-    "Teri tasveer toh bas ek screenshot lagti hai, real life mein tu kuch bhi nahi!",
-    "Abe bhai, tu lagta hai toh I-phone ho, lekin andar kaafi purana android hai!",
-    "Abe, tere jaisi soch se toh Google bhi nafrat karta hoga!",
-    "Bhai tu apne chehre se ghazab ka mood bana le, shayad koi notice kar le!",
-    "Tere kaam bhi uss app ki tarah hote hain jo crash ho jata hai jab sabko zarurat ho!",
-    "Teri zindagi ke sabse bada hack toh hai - 'Log mujhse kuch bhi expect mat karo'!",
-    "Abe tu apne aap ko hi mirror mein dekh ke samajhta hai ki sab kuch sahi hai!",
-    "Abe tu apne dimaag ko low power mode mein daalke chalta hai!",
-    "Tere paas ideas hain, par sab outdated hain jaise Windows XP!",
-    "Teri soch toh ek system error ki tarah hai, restart karna padega!",
-    "Teri personality toh ek empty hard drive jaise hai, kuch bhi valuable nahi!", 
-    "Abe tu kis planet se aaya hai, yeh duniya tere jaise logon ke liye nahi hai!",
-    "Tere chehre pe kisi ne 'loading' likh diya hai, par kabhi bhi complete nahi hota!",
-    "Tera dimaag toh ek broken link ki tarah hai, kabhi bhi connect nahi hota!",
-    "Abe, teri soch se toh Google ka algorithm bhi confused ho jata hai!",
-    "Tere jaisa banda, aur aise ideas? Yeh toh humne science fiction mein dekha tha!",
-    "Abe tu apne chehre pe 'not found' likhwa le, kyunki sabko kuch milta nahi!",
-    "Teri soch itni slow hai, Google bhi teri madad nahi kar paata!",
-    "Abe tu toh '404 not found' ka living example hai!",
-    "Tera dimaag bhi phone ki battery jaise hai, kabhi bhi drain ho jaata hai!",
-    "Abe tu toh wahi hai, jo apni zindagi ka password bhool jaata hai!",
-    "Abe tu jise apni soch samajhta hai, wo ek 'buffering' hai!",
-    "Teri life ke decisions itne confusing hain, ki KBC ke host bhi haraan ho jaaye!",
-    "Bhai, tere jaise logo ke liye ek dedicated 'error' page hona chahiye!",
-    "Teri zindagi ko 'user not found' ka message mil gaya hai!",
-    "Teri baatein utni hi value rakhti hain, jitni 90s ke mobile phones mein camera quality thi!",
-    "Abe bhai, tu toh har waqt 'under construction' rehta hai!",
-    "Tere saath toh life ka 'unknown error' hota hai, koi solution nahi milta!",
-    "Bhai, tere chehre pe ek warning sign hona chahiye - 'Caution: Too much stupidity ahead'!",
-    "Teri har baat pe lagta hai, system crash hone waala hai!",
-    "Tere paas idea hai, par wo abhi bhi 'under review' hai!"
-];               
+        "Tera style bilkul WiFi password ki tarah hai, sabko pata nahi!",
+        "Bhai, teri soch ke liye ek dedicated server hona chahiye!",
+        "Tere jokes bhi software update ki tarah hote hain, baar-baar lagte hain par kaam nahi karte!"
+    ];                
         
     let randomRoast = roasts[Math.floor(Math.random() * roasts.length)];
-    let sender = `@${mek.sender.split("@")[0]}`;
     let mentionedUser = m.mentionedJid[0] || (mek.quoted && mek.quoted.sender);
 
     if (!mentionedUser) {
-        return reply("Usage: .roast @user (Tag someone to roast them!)");
+        await sendFormattedMessage(
+            conn, 
+            mek.chat, 
+            "🔥 *Please mention a user to roast*\n\n📌 *Usage:* .roast @user", 
+            sender, 
+            pushname,
+            "Roast - Error",
+            "Missing user"
+        );
+        return;
     }
 
     let target = `@${mentionedUser.split("@")[0]}`;
-    
-    // Sending the roast message with the mentioned user
-    let message = `${target} :\n *${randomRoast}*\n> This is all for fun, don't take it seriously!`;
-    await conn.sendMessage(mek.chat, { text: message, mentions: [mek.sender, mentionedUser] }, { quoted: mek });
+    let message = `${target}\n\n🔥 *${randomRoast}*\n\n> *This is all for fun, don't take it seriously!*`;
+
+    await sendFormattedMessage(
+        conn, 
+        mek.chat, 
+        message, 
+        sender, 
+        pushname,
+        "Roast Command",
+        "🔥 Roasted!"
+    );
 });
 
 cmd({
@@ -179,18 +252,37 @@ cmd({
     react: "🎱",
     filename: __filename
 }, 
-async (conn, mek, m, { from, q, reply }) => {
-    if (!q) return reply("Ask a yes/no question! Example: .8ball Will I be rich?");
+async (conn, mek, m, { from, q, reply, sender, pushname }) => {
+    if (!q) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "🎱 *Ask a yes/no question!*\n\n📌 *Usage:* .8ball Will I be rich?", 
+            sender, 
+            pushname,
+            "8Ball - Error",
+            "No question"
+        );
+        return;
+    }
     
     let responses = [
-        "Yes!", "No.", "Maybe...", "Definitely!", "Not sure.", 
-        "Ask again later.", "I don't think so.", "Absolutely!", 
-        "No way!", "Looks promising!"
+        "✅ Yes!", "❌ No.", "🤔 Maybe...", "💯 Definitely!", 
+        "❓ Not sure.", "🔄 Ask again later.", "🚫 I don't think so.", 
+        "😎 Absolutely!", "😤 No way!", "📈 Looks promising!"
     ];
     
     let answer = responses[Math.floor(Math.random() * responses.length)];
     
-    reply(`🎱 *Magic 8-Ball says:* ${answer}`);
+    await sendFormattedMessage(
+        conn, 
+        from, 
+        `🎱 *Magic 8-Ball says:*\n\n${answer}`, 
+        sender, 
+        pushname,
+        "Magic 8Ball",
+        `Question: ${q.substring(0, 50)}`
+    );
 });
 
 cmd({
@@ -200,7 +292,7 @@ cmd({
     react: "😊",
     filename: __filename,
     use: "@tag (optional)"
-}, async (conn, mek, m, { reply }) => {
+}, async (conn, mek, m, { reply, sender, pushname }) => {
     let compliments = [
         "You're amazing just the way you are! 💖",
         "You light up every room you walk into! 🌟",
@@ -212,28 +304,26 @@ cmd({
         "You're unique and irreplaceable! ✨",
         "You're a great listener and a wonderful friend! 🤗",
         "Your positive vibes are truly inspiring! 💫",
-        "You're stronger than you think! 💪",
-        "Your creativity is beyond amazing! 🎨",
-        "You make life more fun and interesting! 🎉",
-        "Your energy is uplifting to everyone around you! 🔥",
-        "You're a true leader, even if you don’t realize it! 🏆",
-        "Your words have the power to make people smile! 😊",
-        "You're so talented, and the world needs your skills! 🎭",
-        "You're a walking masterpiece of awesomeness! 🎨",
-        "You're proof that kindness still exists in the world! 💕",
-        "You make even the hardest days feel a little brighter! ☀️"
+        "You're stronger than you think! 💪"
     ];
 
     let randomCompliment = compliments[Math.floor(Math.random() * compliments.length)];
-    let sender = `@${mek.sender.split("@")[0]}`;
     let mentionedUser = m.mentionedJid[0] || (mek.quoted && mek.quoted.sender);
     let target = mentionedUser ? `@${mentionedUser.split("@")[0]}` : "";
 
     let message = mentionedUser 
-        ? `${sender} complimented ${target}:\n😊 *${randomCompliment}*`
-        : `${sender}, you forgot to tag someone! But hey, here's a compliment for you:\n😊 *${randomCompliment}*`;
+        ? `😊 *Compliment for* ${target}\n\n💖 ${randomCompliment}`
+        : `😊 *Here's a compliment for you!*\n\n💖 ${randomCompliment}`;
 
-    await conn.sendMessage(mek.chat, { text: message, mentions: [mek.sender, mentionedUser].filter(Boolean) }, { quoted: mek });
+    await sendFormattedMessage(
+        conn, 
+        mek.chat, 
+        message, 
+        sender, 
+        pushname,
+        "Compliment",
+        "💖 Kind words"
+    );
 });
 
 cmd({
@@ -243,100 +333,102 @@ cmd({
     react: "❤️",
     filename: __filename,
     use: "@tag1 @tag2"
-}, async (conn, mek, m, { args, reply }) => {
-    if (args.length < 2) return reply("Tag two users! Example: .lovetest @user1 @user2");
+}, async (conn, mek, m, { args, reply, sender, pushname }) => {
+    if (args.length < 2) {
+        await sendFormattedMessage(
+            conn, 
+            mek.chat, 
+            "❤️ *Please mention two users to test love compatibility*\n\n📌 *Usage:* .lovetest @user1 @user2", 
+            sender, 
+            pushname,
+            "Love Test - Error",
+            "Missing users"
+        );
+        return;
+    }
 
     let user1 = args[0].replace("@", "") + "@s.whatsapp.net";
     let user2 = args[1].replace("@", "") + "@s.whatsapp.net";
 
-    let lovePercent = Math.floor(Math.random() * 100) + 1; // Generates a number between 1-100
+    let lovePercent = Math.floor(Math.random() * 100) + 1;
 
-    let messages = [
-        { range: [90, 100], text: "💖 *A match made in heaven!* True love exists!" },
-        { range: [75, 89], text: "😍 *Strong connection!* This love is deep and meaningful." },
-        { range: [50, 74], text: "😊 *Good compatibility!* You both can make it work." },
-        { range: [30, 49], text: "🤔 *It’s complicated!* Needs effort, but possible!" },
-        { range: [10, 29], text: "😅 *Not the best match!* Maybe try being just friends?" },
-        { range: [1, 9], text: "💔 *Uh-oh!* This love is as real as a Bollywood breakup!" }
-    ];
+    let loveMessage = "";
+    if (lovePercent >= 90) loveMessage = "💖 *A match made in heaven!* True love exists!";
+    else if (lovePercent >= 75) loveMessage = "😍 *Strong connection!* This love is deep and meaningful!";
+    else if (lovePercent >= 50) loveMessage = "😊 *Good compatibility!* You both can make it work!";
+    else if (lovePercent >= 30) loveMessage = "🤔 *It's complicated!* Needs effort, but possible!";
+    else if (lovePercent >= 10) loveMessage = "😅 *Not the best match!* Maybe try being just friends?";
+    else loveMessage = "💔 *Uh-oh!* This love is not meant to be!";
 
-    let loveMessage = messages.find(msg => lovePercent >= msg.range[0] && lovePercent <= msg.range[1]).text;
+    let message = `💘 *Love Compatibility Test* 💘\n\n❤️ @${user1.split('@')[0]} + @${user2.split('@')[0]}\n\n📊 *Love Score:* ${lovePercent}%\n\n${loveMessage}`;
 
-    let message = `💘 *Love Compatibility Test* 💘\n\n❤️ *@${user1.split("@")[0]}* + *@${user2.split("@")[0]}* = *${lovePercent}%*\n${loveMessage}`;
-
-    await conn.sendMessage(mek.chat, { text: message, mentions: [user1, user2] }, { quoted: mek });
+    await sendFormattedMessage(
+        conn, 
+        mek.chat, 
+        message, 
+        sender, 
+        pushname,
+        "Love Test",
+        `${lovePercent}% compatible`
+    );
 }); 
 
-cmd(
-    {
-        pattern: "emoji",
-        desc: "Convert text into emoji form.",
-        category: "fun",
-        react: "🙂",
-        filename: __filename,
-        use: "<text>"
-    },
-    async (conn, mek, m, { args, q, reply }) => {
-        try {
-            // Join the words together in case the user enters multiple words
-            let text = args.join(" ");
-            
-            // Map text to corresponding emoji characters
-            let emojiMapping = {
-                "a": "🅰️",
-                "b": "🅱️",
-                "c": "🇨️",
-                "d": "🇩️",
-                "e": "🇪️",
-                "f": "🇫️",
-                "g": "🇬️",
-                "h": "🇭️",
-                "i": "🇮️",
-                "j": "🇯️",
-                "k": "🇰️",
-                "l": "🇱️",
-                "m": "🇲️",
-                "n": "🇳️",
-                "o": "🅾️",
-                "p": "🇵️",
-                "q": "🇶️",
-                "r": "🇷️",
-                "s": "🇸️",
-                "t": "🇹️",
-                "u": "🇺️",
-                "v": "🇻️",
-                "w": "🇼️",
-                "x": "🇽️",
-                "y": "🇾️",
-                "z": "🇿️",
-                "0": "0️⃣",
-                "1": "1️⃣",
-                "2": "2️⃣",
-                "3": "3️⃣",
-                "4": "4️⃣",
-                "5": "5️⃣",
-                "6": "6️⃣",
-                "7": "7️⃣",
-                "8": "8️⃣",
-                "9": "9️⃣",
-                " ": "␣", // for space
-            };
+cmd({
+    pattern: "emoji",
+    desc: "Convert text into emoji form.",
+    category: "fun",
+    react: "🙂",
+    filename: __filename,
+    use: "<text>"
+}, async (conn, mek, m, { args, q, reply, sender, pushname }) => {
+    try {
+        let text = args.join(" ");
+        
+        let emojiMapping = {
+            "a": "🅰️", "b": "🅱️", "c": "🇨️", "d": "🇩️", "e": "🇪️", "f": "🇫️", "g": "🇬️",
+            "h": "🇭️", "i": "🇮️", "j": "🇯️", "k": "🇰️", "l": "🇱️", "m": "🇲️", "n": "🇳️",
+            "o": "🅾️", "p": "🇵️", "q": "🇶️", "r": "🇷️", "s": "🇸️", "t": "🇹️", "u": "🇺️",
+            "v": "🇻️", "w": "🇼️", "x": "🇽️", "y": "🇾️", "z": "🇿️",
+            "0": "0️⃣", "1": "1️⃣", "2": "2️⃣", "3": "3️⃣", "4": "4️⃣",
+            "5": "5️⃣", "6": "6️⃣", "7": "7️⃣", "8": "8️⃣", "9": "9️⃣",
+            " ": "␣",
+        };
 
-            // Convert the input text into emoji form
-            let emojiText = text.toLowerCase().split("").map(char => emojiMapping[char] || char).join("");
-
-            // If no valid text is provided
-            if (!text) {
-                return reply("Please provide some text to convert into emojis!");
-            }
-
-            await conn.sendMessage(mek.chat, {
-                text: emojiText,
-            }, { quoted: mek });
-
-        } catch (error) {
-            console.log(error);
-            reply(`Error: ${error.message}`);
+        if (!text) {
+            await sendFormattedMessage(
+                conn, 
+                mek.chat, 
+                "🙂 *Please provide some text to convert into emojis!*\n\n📌 *Usage:* .emoji hello world", 
+                sender, 
+                pushname,
+                "Emoji Convert - Error",
+                "No text"
+            );
+            return;
         }
+
+        let emojiText = text.toLowerCase().split("").map(char => emojiMapping[char] || char).join("");
+
+        await sendFormattedMessage(
+            conn, 
+            mek.chat, 
+            `🔤 *Text to Emoji*\n\n📝 *Original:* ${text}\n\n🎨 *Emoji Form:*\n${emojiText}`, 
+            sender, 
+            pushname,
+            "Emoji Converter",
+            `Converted: ${text.substring(0, 30)}`
+        );
+
+    } catch (error) {
+        console.log(error);
+        await sendFormattedMessage(
+            conn, 
+            mek.chat, 
+            `❌ *Error:* ${error.message}`, 
+            sender, 
+            pushname,
+            "Error",
+            "Command failed"
+        );
     }
-);
+});
