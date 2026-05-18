@@ -4,14 +4,14 @@ const { runtime } = require('../lib/functions');
 const config = require('../config');
 
 fana({
-    pattern: "alive",
+    name: "alive",  // Changed from "pattern" to "name"
     alias: ["status", "online", "a"],
     desc: "Check bot is alive or not",
     category: "main",
-    react: "🏓",
+    fromMe: false,  // Optional: who can use this command
     filename: __filename
 },
-async (conn, mek, m, { from, sender, reply }) => {
+async (conn, mek, args, { from, sender, reply }) => {  // Removed 'm' parameter
     try {
         const status = `
 *ᴀʟɪᴠᴇ ᴜᴩᴛɪᴍᴇ: (${runtime(process.uptime())})*`;
@@ -54,5 +54,3 @@ async (conn, mek, m, { from, sender, reply }) => {
         reply(`An error occurred: ${e.message}`);
     }
 });
-
-  
