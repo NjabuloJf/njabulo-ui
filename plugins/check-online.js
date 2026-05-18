@@ -1,4 +1,50 @@
 const { cmd } = require('../command');
+const config = require("../config");
+
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "Online Members System",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
 
 cmd({
     pattern: "online",
@@ -8,18 +54,46 @@ cmd({
     react: "🟢",
     filename: __filename
 },
-async (conn, mek, m, { from, quoted, isGroup, isAdmins, isCreator, fromMe, reply }) => {
+async (conn, mek, m, { from, quoted, isGroup, isAdmins, isCreator, fromMe, reply, sender, pushname }) => {
     try {
         // Check if the command is used in a group
-        if (!isGroup) return reply("❌ This command can only be used in a group!");
+        if (!isGroup) {
+            await sendFormattedMessage(
+                conn, 
+                from, 
+                "❌ *This command can only be used in a group!*", 
+                sender, 
+                pushname,
+                "Online Command - Error",
+                "Not a group chat"
+            );
+            return;
+        }
 
         // Check if user is either creator or admin
         if (!isCreator && !isAdmins && !fromMe) {
-            return reply("❌ Only bot owner and group admins can use this command!");
+            await sendFormattedMessage(
+                conn, 
+                from, 
+                "❌ *Access Denied*\n\nOnly bot owner and group admins can use this command!", 
+                sender, 
+                pushname,
+                "Online Command - Access Denied",
+                "Admin/Owner only command"
+            );
+            return;
         }
 
         // Inform user that we're checking
-        await reply("🔄 Scanning for online members... This may take 15-20 seconds.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "🔄 *Scanning for online members...*\n\nThis may take 15-20 seconds.\n_Please wait..._", 
+            sender, 
+            pushname,
+            "Online Members - Scanning",
+            "Detecting online users"
+        );
 
         const onlineMembers = new Set();
         const groupData = await conn.groupMetadata(from);
@@ -30,9 +104,9 @@ async (conn, mek, m, { from, quoted, isGroup, isAdmins, isCreator, fromMe, reply
             presencePromises.push(
                 conn.presenceSubscribe(participant.id)
                     .then(() => {
-                        // Additional check for better detection
                         return conn.sendPresenceUpdate('composing', participant.id);
                     })
+                    .catch(() => {}) // Ignore errors for individual participants
             );
         }
 
@@ -42,7 +116,6 @@ async (conn, mek, m, { from, quoted, isGroup, isAdmins, isCreator, fromMe, reply
         const presenceHandler = (json) => {
             for (const id in json.presences) {
                 const presence = json.presences[id]?.lastKnownPresence;
-                // Check all possible online states
                 if (['available', 'composing', 'recording', 'online'].includes(presence)) {
                     onlineMembers.add(id);
                 }
@@ -64,7 +137,16 @@ async (conn, mek, m, { from, quoted, isGroup, isAdmins, isCreator, fromMe, reply
                 conn.ev.off('presence.update', presenceHandler);
                 
                 if (onlineMembers.size === 0) {
-                    return reply("⚠️ Couldn't detect any online members. They might be hiding their presence.");
+                    await sendFormattedMessage(
+                        conn, 
+                        from, 
+                        "⚠️ *Couldn't detect any online members*\n\nThey might be hiding their presence or offline.", 
+                        sender, 
+                        pushname,
+                        "Online Members - No Results",
+                        "No online members detected"
+                    );
+                    return;
                 }
                 
                 const onlineArray = Array.from(onlineMembers);
@@ -72,19 +154,67 @@ async (conn, mek, m, { from, quoted, isGroup, isAdmins, isCreator, fromMe, reply
                     `${index + 1}. @${member.split('@')[0]}`
                 ).join('\n');
                 
-                const message = `🟢 *Online Members* (${onlineArray.length}/${groupData.participants.length}):\n\n${onlineList}`;
+                const totalMembers = groupData.participants.length;
+                const onlineCount = onlineArray.length;
                 
-                await conn.sendMessage(from, { 
-                    text: message,
-                    mentions: onlineArray
-                }, { quoted: mek });
+                const message = `🟢 *ONLINE MEMBERS* 🟢
+
+╭───〔 *GROUP STATUS* 〕───◉
+│
+├▢ *Group:* ${groupData.subject || "Unknown"}
+├▢ *Total Members:* ${totalMembers}
+├▢ *Online Now:* ${onlineCount}
+├▢ *Status:* ${onlineCount > 0 ? '🟢 Active' : '⚫ Inactive'}
+│
+╰──────────────────◉
+
+*Online Members List:*\n
+${onlineList}
+
+━━━━━━━━━━━━━━━━
+_Last updated: Just now_`;
+
+                await sendFormattedMessage(
+                    conn, 
+                    from, 
+                    message, 
+                    sender, 
+                    pushname,
+                    "Online Members Report",
+                    `${onlineCount}/${totalMembers} members online`
+                );
             }
         };
 
         const interval = setInterval(checkOnline, checkInterval);
 
+        // Auto-cleanup after 30 seconds if something goes wrong
+        setTimeout(() => {
+            if (checksDone < checks) {
+                clearInterval(interval);
+                conn.ev.off('presence.update', presenceHandler);
+                sendFormattedMessage(
+                    conn, 
+                    from, 
+                    "⚠️ *Timeout*\n\nCould not complete the scan. Please try again.", 
+                    sender, 
+                    pushname,
+                    "Online Command - Timeout",
+                    "Scan timed out"
+                );
+            }
+        }, 30000);
+
     } catch (e) {
         console.error("Error in online command:", e);
-        reply(`An error occurred: ${e.message}`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            `❌ *Error:* ${e.message}`, 
+            sender, 
+            pushname,
+            "Online Command - Error",
+            "Something went wrong"
+        );
     }
 });
