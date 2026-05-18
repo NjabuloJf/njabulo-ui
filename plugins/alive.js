@@ -1,9 +1,9 @@
-const { cmd } = require('../command');
+const { fana } = require('../njabulo');
 const os = require("os");
 const { runtime } = require('../lib/functions');
 const config = require('../config');
 
-cmd({
+fana({
     pattern: "alive",
     alias: ["status", "online", "a"],
     desc: "Check bot is alive or not",
