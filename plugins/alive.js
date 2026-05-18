@@ -21,7 +21,7 @@ async (conn, mek, m, { from, sender, reply }) => {
           contextInfo: {
               isForwarded: true,
                forwardedNewsletterMessageInfo: {
-                 newsletterJid: '120363399999197102@newsletter',
+                 newsletterJid: config.NEWSLETTER,
                    newsletterName: '╭••➤®Njabulo Jb',
                    serverMessageId: 143
                },
@@ -29,8 +29,8 @@ async (conn, mek, m, { from, sender, reply }) => {
                 externalAdReply: {
                     title: "🖥️ᴛᴇꜱᴛ ʙᴏᴛ ᴀʟɪᴠᴇ ᴜᴩᴛɪᴍᴇ",
                     body: "📡ꜱʏꜱᴛᴇᴍ ɪɴꜰᴏʀᴍᴀᴛɪᴏɴ",
-                    thumbnailUrl: "https://files.catbox.moe/173jef.jpeg",
-                    sourceUrl: "https://whatsapp.com/channel/0029VarYP5iAInPtfQ8fRb2T",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
                     mediaType: 1,
                     renderSmallThumbnail: true
                 }
