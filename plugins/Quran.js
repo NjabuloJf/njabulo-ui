@@ -3,6 +3,7 @@ const { cmd, commands } = require('../command');
 const { fetchJson } = require('../lib/functions');
 const { translate } = require('@vitalets/google-translate-api');
 const axios = require('axios')
+const config = require('../config');
 
 // ============= FORMATTED MESSAGE FUNCTION =============
 // ALL replies will use this function for consistent formatting
