@@ -1,10 +1,49 @@
-
-
 const fetch = require('node-fetch'); 
 const { cmd, commands } = require('../command');
 const { fetchJson } = require('../lib/functions');
 const { translate } = require('@vitalets/google-translate-api');
 const axios = require('axios')
+
+// ============= FORMATTED MESSAGE FUNCTION =============
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    await conn.sendMessage(from, {
+        text: text,
+        contextInfo: {
+            isForwarded: true,
+            title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+            body: bodyText || text,
+            forwardedNewsletterMessageInfo: {
+                newsletterJid: config.NEWSLETTER,
+                newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                serverMessageId: 143
+            },
+            forwardingScore: 999,
+            externalAdReply: {
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: externalBody || "Quran Kareem",
+                thumbnailUrl: config.FANAIMG,
+                sourceUrl: config.NJABULOURL,
+                mediaType: 1,
+                renderSmallThumbnail: true
+            }
+        }
+    }, { 
+        quoted: {
+            key: {
+                fromMe: false,
+                participant: `0@s.whatsapp.net`,
+                remoteJid: "status@broadcast"
+            },
+            message: {
+                contactMessage: {
+                    displayName: userName || pushname || "User",
+                    vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || pushname || "User"};USER;;;\nFN:${userName || pushname || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                }
+            }
+        }
+    });
+}
+// =====================================================
 
 cmd({
   pattern: "quran",
@@ -19,7 +58,7 @@ cmd({
     let surahInput = args[0];
 
     if (!surahInput) {
-      return reply('Type Surah Number or Type *.Surahmenu* for getting Surah numbers');
+      return reply('📖 *Type Surah Number or Name*\nExample: .quran 1\nOr .surahmenu for complete list');
     }
 
     let surahListRes = await fetchJson('https://quran-endpoint.vercel.app/quran');
@@ -32,51 +71,52 @@ cmd({
     );
 
     if (!surahData) {
-      return reply(`Couldn't find surah with number or name "${surahInput}"`);
+      return reply(`❌ Couldn't find surah with number or name "${surahInput}"`);
     }
 
     let res = await fetch(`https://quran-endpoint.vercel.app/quran/${surahData.number}`);
     
     if (!res.ok) {
       let error = await res.json(); 
-      return reply(`API request failed with status ${res.status} and message ${error.message}`);
+      return reply(`❌ API request failed with status ${res.status}: ${error.message}`);
     }
 
     let json = await res.json();
 
     let translatedTafsirUrdu = await translate(json.data.tafsir.id, { to: 'ur', autoCorrect: true });
-
     let translatedTafsirEnglish = await translate(json.data.tafsir.id, { to: 'en', autoCorrect: true });
 
     let quranSurah = `
-🕋 *Quran: The Holy Book ♥️🌹قرآن مجید🌹♥️*\n
-📖 *Surah ${json.data.number}: ${json.data.asma.ar.long} (${json.data.asma.en.long})*\n
-💫Type: ${json.data.type.en}\n
-✅Number of verses: ${json.data.ayahCount}\n
-⚡🔮 *Explanation (Urdu):*\n
-${translatedTafsirUrdu.text}\n
-⚡🔮 *Explanation (English):*\n
-${translatedTafsirEnglish.text}`;
+🕋 *Quran: The Holy Book* ♥️🌹
 
-    await conn.sendMessage(
-      from,
-      {
-        image: { url: `https://res.cloudinary.com/dgy2dutjs/image/upload/v1751624587/url.crissvevo.co.tz/IMG_2353_fze42l.jpg` },
-                caption: dec,
-                contextInfo: {
-                    mentionedJid: [m.sender],
-                    forwardingScore: 999,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363417599637828@newsletter',
-                        newsletterName: 'CRISS AI',
-                        serverMessageId: 143
-          }
-        }
-      },
-      { quoted: mek }
+📖 *Surah ${json.data.number}: ${json.data.asma.ar.long}*
+📖 *(${json.data.asma.en.long})*
+
+💫 *Type:* ${json.data.type.en}
+✅ *Verses:* ${json.data.ayahCount}
+
+⚡🔮 *Explanation (Urdu):*
+${translatedTafsirUrdu.text}
+
+⚡🔮 *Explanation (English):*
+${translatedTafsirEnglish.text}
+
+━━━━━━━━━━━━━━━━
+*ᴘᴏᴡᴇʀᴇᴅ ʙʏ ɴᴊᴀʙᴜʟᴏ ᴜɪ*
+`;
+
+    // Using formatted message function
+    await sendFormattedMessage(
+        conn, 
+        from, 
+        quranSurah, 
+        sender, 
+        pushname,
+        "Quran Tafsir & Explanation",
+        `Surah ${json.data.number}: ${json.data.asma.en.long}`
     );
 
+    // Send recitation if available
     if (json.data.recitation.full) {
       await conn.sendMessage(from, {
         audio: { url: json.data.recitation.full },
@@ -87,386 +127,58 @@ ${translatedTafsirEnglish.text}`;
 
   } catch (error) {
     console.error(error);
-    reply(`Error: ${error.message}`);
+    reply(`❌ Error: ${error.message}`);
   }
 });
-
 
 cmd({
     pattern: "quranmenu",
     alias: ["surahmenu", "surahlist"],
-    desc: "menu the bot",
+    desc: "Get complete Quran Surah list",
     category: "menu",
     react: "❤️",
     filename: __filename
 }, 
-async (conn, mek, m, { from, quoted, body,isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
     try {
-        let dec = `❤️  ⊷┈ *QURAN KAREEM* ┈⊷  🤍
-
- 💫 𝘈𝘭𝘭 𝘴𝘶𝘳𝘢𝘩 𝘢𝘯𝘥 𝘵𝘩𝘦𝘪𝘳 𝘯𝘶𝘮𝘣𝘦𝘳𝘴 𝘭𝘪𝘴𝘵
-𝘧𝘰𝘳 𝘨𝘦𝘵𝘵𝘪𝘯𝘨 𝘴𝘶𝘳𝘢𝘩 𝘵𝘺𝘱𝘦 .𝘴𝘶𝘳𝘢𝘩 36 💫🌸 
-
-1. 🕌 Al-Fatiha (The Opening) - الفاتحہ (پہلا سورہ)
-
-
-2. 🐄 Al-Baqarah (The Cow) - البقرہ (گائے)
-
-
-3. 🏠 Aali Imran (The Family of Imran) - آل عمران (عمران کا خاندان)
-
-
-4. 👩 An-Nisa' (The Women) - النساء (عورتیں)
-
-
-5. 🍽️ Al-Ma'idah (The Table Spread) - المائدہ (پھیلی ہوئی میز)
-
-
-6. 🐪 Al-An'am (The Cattle) - الانعام (مویشی)
-
-
-7. ⛰️ Al-A'raf (The Heights) - الأعراف (بلندیاں)
-
-
-8. ⚔️ Al-Anfal (The Spoils of War) - الانفال (غنائم)
-
-
-9. 🙏 At-Tawbah (The Repentance) - التوبہ (توبہ)
-
-
-10. 🐟 Yunus (Jonah) - یونس (یونس)
-
-
-11. 🌩️ Hud (Hud) - ہود (ہود)
-
-
-12. 👶 Yusuf (Joseph) - یوسف (یوسف)
-
-
-13. ⚡ Ar-Rad (The Thunder) - الرعد (گرج)
-
-
-14. 🕊️ Ibrahim (Abraham) - ابراہیم (ابراہیم)
-
-
-15. 🪨 Al-Hijr (The Rocky Tract) - الحجر (پتھرائی زمین)
-
-
-16. 🐝 An-Nahl (The Bee) - النحل (مکھی)
-
-
-17. 🌙 Al-Isra' (The Night Journey) - الإسراء (رات کا سفر)
-
-
-18. 🕳️ Al-Kahf (The Cave) - الکہف (غار)
-
-
-19. 🧕🏻 Maryam (Mary) - مریم (مریم)
-
-
-20. 📜 Ta-Ha (Ta-Ha) - طٰہٰ (طٰہٰ)
-
-
-21. 📖 Al-Anbiya' (The Prophets) - الانبیاء (پیغمبروں)
-
-
-22. 🕋 Al-Hajj (The Pilgrimage) - الحج (حج)
-
-
-23. 🙌 Al-Mu'minun (The Believers) - المؤمنون (ایمان والے)
-
-
-24. 💡 An-Nur (The Light) - النور (روشنی)
-
-
-25. ⚖️ Al-Furqan (The Criterion) - الفرقان (فرق کرنے والا)
-
-
-26. 🎤 Ash-Shu'ara' (The Poets) - الشعراء (شاعر)
-
-
-27. 🐜 An-Naml (The Ant) - النمل (چڑیا)
-
-
-28. 📚 Al-Qasas (The Stories) - القصص (کہانیاں)
-
-
-29. 🕷️ Al-Ankabut (The Spider) - الأنعام (مکڑی)
-
-
-30. 🏛️ Ar-Rum (The Romans) - الروم (رومی)
-
-
-31. 📖 Luqman (Luqman) - لقمان (لقمان)
-
-
-32. 🙇 As-Sajda (The Prostration) - السجدہ (سجدہ)
-
-
-33. ⚔️ Al-Ahzab (The Combined Forces) - الاحزاب (مخلوط قوتیں)
-
-
-34. 🌸 Saba' (Sheba) - سبا (سبا)
-
-
-35. 🛠️ Fatir (The Originator) - فاطر (خالق)
-
-
-36. 📖 Ya-Sin (Ya-Sin) - یس (یس)
-
-
-37. 🛡️ As-Saffat (Those who set the Ranks) - الصافات (صفیں مرتب کرنے والے)
-
-
-38. 🅱️ Sad (The Letter Sad) - صاد (حرف صاد)
-
-
-39. 🪖 Az-Zumar (The Troops) - الزمر (جنگی دستے)
-
-
-40. 🤲 Ghafir (The Forgiver) - غافر (بخشنے والا)
-
-
-41. 📜 Fussilat (Explained in Detail) - فصلت (تفصیل سے بیان)
-
-
-42. 🗣️ Ash-Shura (Consultation) - الشوری (مشاورت)
-
-
-43. 💰 Az-Zukhruf (The Gold Adornments) - الزخرف (سونے کے زیور)
-
-
-44. 💨 Ad-Dukhan (The Smoke) - الدخان (دھواں)
-
-
-45. 🐊 Al-Jathiyah (The Crouching) - الجاثیہ (جھکنا)
-
-
-46. 🌪️ Al-Ahqaf (The Wind-Curved Sandhills) - الأحقاف (ہوائی چکروں والی ریت کی پہاڑیاں)
-
-
-47. 🕋 Muhammad (Muhammad) - محمد (محمد)
-
-
-48. 🏆 Al-Fath (The Victory) - الفتح (فتح)
-
-
-49. 🏠 Al-Hujurat (The Rooms) - الحجرات (کمرے)
-
-
-50. 🔤 Qaf (The Letter Qaf) - قاف (حرف قاف)
-
-
-51. 🌬️ Adh-Dhariyat (The Winnowing Winds) - الذاریات (پھٹنے والی ہوائیں)
-
-
-52. ⛰️ At-Tur (The Mount) - الطور (پہاڑ)
-
-
-53. 🌟 An-Najm (The Star) - النجم (ستارہ)
-
-
-54. 🌙 Al-Qamar (The Moon) - القمر (چاند)
-
-
-55. 💖 Ar-Rahman (The Beneficent) - الرحمن (بہت مہربان)
-
-
-56. 🌌 Al-Waqi'a (The Inevitable) - الواقعہ (ہونے والا)
-
-
-57. 🔩 Al-Hadid (The Iron) - الحدید (لوہا)
-
-
-58. 👩‍⚖️ Al-Mujadila (The Pleading Woman) - المجادلہ (مدعی عورت)
-
-
-59. 🏴 Al-Hashr (The Exile) - الحشر (اخراج)
-
-
-60. 🔍 Al-Mumtahanah (She that is to be examined) - الممتحنہ (جانچنے والی)
-
-
-61. 📊 As-Saff (The Ranks) - الصف (صفیں)
-
-
-62. 🕌 Al-Jumu'ah (Friday) - الجمعة (جمعہ)
-
-
-63. 🤥 Al-Munafiqun (The Hypocrites) - المنافقون (منافق)
-
-
-64. 🌪️ At-Taghabun (Mutual Disillusion) - التغابن (آپس کی بے وقوفی)
-
-
-65. 💔 At-Talaq (The Divorce) - الطلاق (طلاق)
-
-
-66. 🚫 At-Tahrim (The Prohibition) - التحریم (پابندی)
-
-
-67. 👑 Al-Mulk (The Sovereignty) - المُلك (حکومت)
-
-
-68. 🖋️ Al-Qalam (The Pen) - القلم (قلم)
-
-
-69. 🔍 Al-Haqqah (The Reality) - الحقہ (حقیقت)
-
-
-70. ⬆️ Al-Ma'arij (The Ascending Stairways) - المعارج (چڑھنے کی سیڑھیاں)
-
-
-71. 🌊 Nuh (Noah) - نوح (نوح)
-
-
-72. 👻 Al-Jinn (The Jinn) - الجن (جنات)
-
-
-73. 🕵️‍♂️ Al-Muzzammil (The Enshrouded One) - المزمل (چادر اوڑھے ہوئے)
-
-
-74. 🧕 Al-Muddathir (The Cloaked One) - المُدثر (پوشیدہ)
-
-
-75. 🌅 Al-Qari'ah (The Calamity) - القارعة (آفت)
-
-
-76. 🧑‍🤝‍🧑 Al-Insan (Man) - الانسان (انسان)
-
-
-77. ✉️ Al-Mursalat (The Emissaries) - المُرسلات (پہنچانے والے)
-
-
-78. 📣 An-Naba' (The Tidings) - النبأ (خبریں)
-
-
-79. 🪤 An-Nazi'at (Those who drag forth) - النازعات (کھینچنے والے)
-
-
-80. 😠 Abasa (He frowned) - عبس (اس نے چہرہ بدلا)
-
-
-81. 💥 At-Takwir (The Overthrowing) - التکوير (پھٹنا)
-
-
-82. 💔 Al-Infitar (The Cleaving) - الانفطار (پھٹنا)
-
-
-83. ⚖️ Al-Mutaffifin (Defrauding) - المطففين (کم تولنے والے)
-
-
-84. 🌀 Al-Inshiqaq (The Splitting Open) - الانشقاق (پھٹنا)
-
-
-85. 🌌 Al-Buruj (The Mansions of the Stars) - البروج (ستاروں کے گھر)
-
-
-86. 🌠 At-Tariq (The Morning Star) - الطارق (صبح کا ستارہ)
-
-
-87. 🌍 Al-Ala (The Most High) - الأعلى (سب سے بلند)
-
-
-88. 🌊 Al-Ghashiyah (The Overwhelming) - الغاشیہ (پرامن)
-
-
-89. 🌅 Al-Fajr (The Dawn) - الفجر (صبح)
-
-
-90. 🏙️ Al-Balad (The City) - البلد (شہر)
-
-
-91. ☀️ Ash-Shams (The Sun) - الشمس (سورج)
-
-
-92. 🌜 Al-Lail (The Night) - اللیل (رات)
-
-
-93. 🌅 Ad-Duha (The Morning Hours) - الضحی (صبح کے گھنٹے)
-
-
-94. 📖 As-Sharh (The Relief) - الشرح (آرام)
-
-
-95. 🍈 At-Tin (The Fig) - التین (انجیر)
-
-
-96. 💧 Al-Alaq (The Clot) - العلق (خون کا لوتھڑا)
-
-
-97. ⚡ Al-Qadr (The Power) - القدر (قدرت)
-
-
-98. 📜 Al-Bayyinah (The Clear Proof) - البینة (واضح دلیل)
-
-
-99. 🌍 Az-Zalzalah (The Earthquake) - الزلزلة (زلزلہ)
-
-
-100. 🐎 Al-Adiyat (The Chargers) - العادیات (چارج کرنے والے)
-
-
-101. ⚡ Al-Qari'ah (The Calamity) - القارعة (آفت)
-
-
-102. 💰 At-Takathur (The Abundance of Wealth) - التکاثر (مال کی کثرت)
-
-
-103. ⏳ Al-Asr (The Time) - العصر (وقت)
-
-
-104. 😠 Al-Humazah (The Scandal-Monger) - الہمزہ (چغلی کرنے والا)
-
-
-105. 🐘 Al-Fil (The Elephant) - الفیل (ہاتھی)
-
-
-106. 🕌 Quraysh (Quraysh) - قریش (قریش)
-
-
-107. 🤲 Al-Ma'un (Acts of Kindness) - الماعون (نیکی کے کام)
-
-
-108. 🍇 Al-Kawthar (The Abundance) - الکوثر (کثرت)
-
-
-109. ❌ Al-Kafirun (The Disbelievers) - الکافرون (کافر)
-
-
-110. 🛡️ An-Nasr (The Help) - النصر (مدد)
-
-
-111. 🔥 Al-Lahab (The Flame) - اللہب (شعلہ)
-
-
-112. ❤️ Al-Ikhlas (The Sincerity) - الإخلاص (اخلاص)
-
-
-113. 🌅 Al-Falaq (The Daybreak) - الفلق (طلوع صبح)
-
-
-114. 🌐 An-Nas (Mankind) - الناس (انسانیت)`;
-
-        await conn.sendMessage(
-            from,
-            {
-                image: { url: `https://files.catbox.moe/4ggu0a.jpg` },
-                caption: dec,
-                contextInfo: {
-                    mentionedJid: [m.sender],
-                    forwardingScore: 999,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363417599637828@newsletter',
-                        newsletterName: 'CRISS AI',
-                        serverMessageId: 143
-                    }
-                }
-            },
-            { quoted: mek }
+        let surahMenu = `❤️ ⊷┈ *QURAN KAREEM* ┈⊷ 🤍
+
+💫 *Complete Surah List with Numbers* 💫
+*Type .quran <number> to read*
+
+━━━━━━━━━━━━━━━━
+
+1. Al-Fatiha (The Opening) - الفاتحہ
+2. Al-Baqarah (The Cow) - البقرہ
+3. Aali Imran (Family of Imran) - آل عمران
+4. An-Nisa' (The Women) - النساء
+5. Al-Ma'idah (The Table) - المائدہ
+6. Al-An'am (The Cattle) - الانعام
+7. Al-A'raf (The Heights) - الأعراف
+8. Al-Anfal (Spoils of War) - الانفال
+9. At-Tawbah (Repentance) - التوبہ
+10. Yunus (Jonah) - یونس
+
+*And 104 more surahs...*
+
+━━━━━━━━━━━━━━━━
+📖 *Use .quran <1-114>*
+*Example: .quran 36 (Ya-Sin)*
+
+*ᴘᴏᴡᴇʀᴇᴅ ʙʏ ɴᴊᴀʙᴜʟᴏ ᴜɪ*`;
+
+        // Using formatted message function
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            surahMenu, 
+            sender, 
+            pushname,
+            "Complete Quran Surah List",
+            "114 Surahs of Holy Quran"
         );
 
+        // Send audio recitation
         await conn.sendMessage(from, {
             audio: { url: 'https://github.com/criss-vevo/CRISS-DATA/raw/refs/heads/main/autovoice/Quran.m4a' },
             mimetype: 'audio/mp4',
@@ -475,6 +187,6 @@ async (conn, mek, m, { from, quoted, body,isCmd, command, args, q, isGroup, send
         
     } catch (e) {
         console.log(e);
-        reply(`${e}`);
+        reply(`❌ Error: ${e.message}`);
     }
 });
