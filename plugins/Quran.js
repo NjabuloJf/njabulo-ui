@@ -5,6 +5,7 @@ const { translate } = require('@vitalets/google-translate-api');
 const axios = require('axios')
 
 // ============= FORMATTED MESSAGE FUNCTION =============
+// ALL replies will use this function for consistent formatting
 async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
     await conn.sendMessage(from, {
         text: text,
@@ -58,7 +59,17 @@ cmd({
     let surahInput = args[0];
 
     if (!surahInput) {
-      return reply('📖 *Type Surah Number or Name*\nExample: .quran 1\nOr .surahmenu for complete list');
+      // This reply will also use formatted message
+      await sendFormattedMessage(
+          conn, 
+          from, 
+          '📖 *Type Surah Number or Name*\nExample: .quran 1\nOr .surahmenu for complete list', 
+          sender, 
+          pushname,
+          "Error - Missing Input",
+          "Please provide surah number or name"
+      );
+      return;
     }
 
     let surahListRes = await fetchJson('https://quran-endpoint.vercel.app/quran');
@@ -71,14 +82,32 @@ cmd({
     );
 
     if (!surahData) {
-      return reply(`❌ Couldn't find surah with number or name "${surahInput}"`);
+      await sendFormattedMessage(
+          conn, 
+          from, 
+          `❌ Couldn't find surah with number or name "${surahInput}"`, 
+          sender, 
+          pushname,
+          "Error - Surah Not Found",
+          "Check spelling or number"
+      );
+      return;
     }
 
     let res = await fetch(`https://quran-endpoint.vercel.app/quran/${surahData.number}`);
     
     if (!res.ok) {
       let error = await res.json(); 
-      return reply(`❌ API request failed with status ${res.status}: ${error.message}`);
+      await sendFormattedMessage(
+          conn, 
+          from, 
+          `❌ API request failed with status ${res.status}: ${error.message}`, 
+          sender, 
+          pushname,
+          "Error - API Failed",
+          "Please try again later"
+      );
+      return;
     }
 
     let json = await res.json();
@@ -105,7 +134,7 @@ ${translatedTafsirEnglish.text}
 *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ɴᴊᴀʙᴜʟᴏ ᴜɪ*
 `;
 
-    // Using formatted message function
+    // Main Quran message using formatted function
     await sendFormattedMessage(
         conn, 
         from, 
@@ -116,7 +145,7 @@ ${translatedTafsirEnglish.text}
         `Surah ${json.data.number}: ${json.data.asma.en.long}`
     );
 
-    // Send recitation if available
+    // Send recitation if available (this is audio, doesn't need formatting)
     if (json.data.recitation.full) {
       await conn.sendMessage(from, {
         audio: { url: json.data.recitation.full },
@@ -127,7 +156,15 @@ ${translatedTafsirEnglish.text}
 
   } catch (error) {
     console.error(error);
-    reply(`❌ Error: ${error.message}`);
+    await sendFormattedMessage(
+        conn, 
+        from, 
+        `❌ Error: ${error.message}`, 
+        sender, 
+        pushname,
+        "Error Occurred",
+        "Please try again"
+    );
   }
 });
 
@@ -167,7 +204,7 @@ async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sen
 
 *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ɴᴊᴀʙᴜʟᴏ ᴜɪ*`;
 
-        // Using formatted message function
+        // Menu message using formatted function
         await sendFormattedMessage(
             conn, 
             from, 
@@ -178,7 +215,7 @@ async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sen
             "114 Surahs of Holy Quran"
         );
 
-        // Send audio recitation
+        // Send audio recitation (no formatting needed for audio)
         await conn.sendMessage(from, {
             audio: { url: 'https://github.com/criss-vevo/CRISS-DATA/raw/refs/heads/main/autovoice/Quran.m4a' },
             mimetype: 'audio/mp4',
@@ -187,6 +224,14 @@ async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sen
         
     } catch (e) {
         console.log(e);
-        reply(`❌ Error: ${e.message}`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            `❌ Error: ${e.message}`, 
+            sender, 
+            pushname,
+            "Error Occurred",
+            "Please try again"
+        );
     }
 });
