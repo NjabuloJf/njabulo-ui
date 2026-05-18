@@ -2,9 +2,9 @@
 
 {
   "name": "NjabuloJb-max",
-  "description": "Javascript WhatsApp bot made by NjabuloJb-max",
+  "description": "Javascript WhatsApp bot made by NjabuloJb",
   "logo": "https://res.cloudinary.com/dgy2dutjs/image/upload/v1751624587/url.crissvevo.co.tz/IMG_2353_fze42l.jpg",
-  "keywords": ["NjabuloJb-max"],
+  "keywords": ["njabulo-ui"],
   "success_url": "/",
 
     "stack": "container",
