@@ -8,16 +8,17 @@ fana({
     alias: ["status", "online", "a"],
     desc: "Check bot is alive or not",
     category: "main",
-    react: "🏓",
     fromMe: false,
     filename: __filename
 },
 async (conn, mek, args, { from, sender, pushname, reply }) => {
     try {
-        // Get the user's name (pushname is their display name)
+        // Add reaction manually
+        await conn.sendMessage(from, { react: { text: "🏓", key: mek.key } });
+        
         const userName = pushname || sender.split('@')[0] || "User";
         
-        const status = `⏰ *ᴜᴩᴛɪᴍᴇ* : ${runtime(process.uptime())} *ᴀʟɪᴠᴇ ᴜᴩᴛɪᴍᴇ: (${runtime(process.uptime())})*`;
+        const status = `*ᴀʟɪᴠᴇ ᴜᴩᴛɪᴍᴇ: (${runtime(process.uptime())})*`;
 
         await conn.sendMessage(from, {
           text: status,
@@ -40,19 +41,7 @@ async (conn, mek, args, { from, sender, pushname, reply }) => {
                   renderSmallThumbnail: true
               }
           }
-        }, { quoted: {
-            key: {
-                fromMe: false,
-                participant: `0@s.whatsapp.net`,
-                remoteJid: "status@broadcast"
-            },
-            message: {
-                contactMessage: {
-                    displayName: userName,  // Shows the user's name
-                    vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName};USER;;;\nFN:${userName}\nitem1.TEL;waid=${sender.split('@')[0]}:${sender.split('@')[0]}\nitem1.X-ABLabel:User\nEND:VCARD`
-                }
-            }
-        } });
+        });
 
     } catch (e) {
         console.error("Alive Error:", e);
