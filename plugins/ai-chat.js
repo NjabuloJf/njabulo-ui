@@ -1,44 +1,51 @@
 const { cmd } = require('../command');
 const axios = require('axios');
+const config = require('../config');
 
-// All replies will use this formatted message function
+// Formatted message function using config from file
 async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
-    await conn.sendMessage(from, {
-        text: text,
-        contextInfo: {
-            isForwarded: true,
-            title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
-            body: bodyText || text,
-            forwardedNewsletterMessageInfo: {
-                newsletterJid: config.NEWSLETTER,
-                newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
-                serverMessageId: 143
-            },
-            forwardingScore: 999,
-            externalAdReply: {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
                 title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
-                body: externalBody || "AI Assistant",
-                thumbnailUrl: config.FANAIMG,
-                sourceUrl: config.NJABULOURL,
-                mediaType: 1,
-                renderSmallThumbnail: true
-            }
-        }
-    }, { 
-        quoted: {
-            key: {
-                fromMe: false,
-                participant: `0@s.whatsapp.net`,
-                remoteJid: "status@broadcast"
-            },
-            message: {
-                contactMessage: {
-                    displayName: userName || pushname || "User",
-                    vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || pushname || "User"};USER;;;\nFN:${userName || pushname || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "AI Assistant",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
                 }
             }
-        }
-    });
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        // Fallback to simple message if formatted fails
+        await conn.sendMessage(from, { text: text });
+    }
 }
 
 cmd({
@@ -68,7 +75,7 @@ async (conn, mek, m, { from, args, q, reply, react, sender, pushname }) => {
         const { data } = await axios.get(apiUrl);
 
         if (!data || !data.message) {
-            await react("❌");
+            if (react) await react("❌");
             await sendFormattedMessage(
                 conn, 
                 from, 
@@ -90,10 +97,10 @@ async (conn, mek, m, { from, args, q, reply, react, sender, pushname }) => {
             "AI Assistant",
             `Answering: ${q.substring(0, 50)}...`
         );
-        await react("✅");
+        if (react) await react("✅");
     } catch (e) {
         console.error("Error in AI command:", e);
-        await react("❌");
+        if (react) await react("❌");
         await sendFormattedMessage(
             conn, 
             from, 
@@ -133,7 +140,7 @@ async (conn, mek, m, { from, args, q, reply, react, sender, pushname }) => {
         const { data } = await axios.get(apiUrl);
 
         if (!data || !data.result) {
-            await react("❌");
+            if (react) await react("❌");
             await sendFormattedMessage(
                 conn, 
                 from, 
@@ -155,10 +162,10 @@ async (conn, mek, m, { from, args, q, reply, react, sender, pushname }) => {
             "OpenAI Assistant",
             `Answering: ${q.substring(0, 50)}...`
         );
-        await react("✅");
+        if (react) await react("✅");
     } catch (e) {
         console.error("Error in OpenAI command:", e);
-        await react("❌");
+        if (react) await react("❌");
         await sendFormattedMessage(
             conn, 
             from, 
@@ -198,7 +205,7 @@ async (conn, mek, m, { from, args, q, reply, react, sender, pushname }) => {
         const { data } = await axios.get(apiUrl);
 
         if (!data || !data.answer) {
-            await react("❌");
+            if (react) await react("❌");
             await sendFormattedMessage(
                 conn, 
                 from, 
@@ -220,10 +227,10 @@ async (conn, mek, m, { from, args, q, reply, react, sender, pushname }) => {
             "DeepSeek AI Assistant",
             `Answering: ${q.substring(0, 50)}...`
         );
-        await react("✅");
+        if (react) await react("✅");
     } catch (e) {
         console.error("Error in DeepSeek AI command:", e);
-        await react("❌");
+        if (react) await react("❌");
         await sendFormattedMessage(
             conn, 
             from, 
