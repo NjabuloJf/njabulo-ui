@@ -6,6 +6,51 @@ const { getAnti, setAnti, initializeAntiDeleteSettings } = require('../data/anti
 
 initializeAntiDeleteSettings();
 
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "AntiDelete System",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
+
 cmd({
     pattern: "antidelete",
     alias: ['antidel', 'ad'],
@@ -13,8 +58,20 @@ cmd({
     category: "misc",
     filename: __filename
 },
-async (conn, mek, m, { from, reply, q, text, isCreator, fromMe }) => {
-    if (!isCreator) return reply('This command is only for the bot owner');
+async (conn, mek, m, { from, reply, q, text, isCreator, fromMe, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *This command is only for the bot owner*", 
+            sender, 
+            pushname,
+            "AntiDelete - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
+    
     try {
         const command = q?.toLowerCase();
 
@@ -22,66 +79,148 @@ async (conn, mek, m, { from, reply, q, text, isCreator, fromMe }) => {
             case 'on':
                 await setAnti('gc', false);
                 await setAnti('dm', false);
-                return reply('_AntiDelete is now off for Group Chats and Direct Messages._');
+                await sendFormattedMessage(
+                    conn, 
+                    from, 
+                    "🔒 *AntiDelete is now OFF for Group Chats and Direct Messages.*", 
+                    sender, 
+                    pushname,
+                    "AntiDelete",
+                    "Disabled for all"
+                );
+                break;
 
             case 'off gc':
                 await setAnti('gc', false);
-                return reply('_AntiDelete for Group Chats is now disabled._');
+                await sendFormattedMessage(
+                    conn, 
+                    from, 
+                    "🔒 *AntiDelete for Group Chats is now DISABLED.*", 
+                    sender, 
+                    pushname,
+                    "AntiDelete",
+                    "GC disabled"
+                );
+                break;
 
             case 'off dm':
                 await setAnti('dm', false);
-                return reply('_AntiDelete for Direct Messages is now disabled._');
+                await sendFormattedMessage(
+                    conn, 
+                    from, 
+                    "🔒 *AntiDelete for Direct Messages is now DISABLED.*", 
+                    sender, 
+                    pushname,
+                    "AntiDelete",
+                    "DM disabled"
+                );
+                break;
 
             case 'set gc':
                 const gcStatus = await getAnti('gc');
                 await setAnti('gc', !gcStatus);
-                return reply(`_AntiDelete for Group Chats ${!gcStatus ? 'enabled' : 'disabled'}._`);
+                await sendFormattedMessage(
+                    conn, 
+                    from, 
+                    `🔒 *AntiDelete for Group Chats ${!gcStatus ? 'ENABLED' : 'DISABLED'}.*`, 
+                    sender, 
+                    pushname,
+                    "AntiDelete",
+                    `GC ${!gcStatus ? 'ON' : 'OFF'}`
+                );
+                break;
 
             case 'set dm':
                 const dmStatus = await getAnti('dm');
                 await setAnti('dm', !dmStatus);
-                return reply(`_AntiDelete for Direct Messages ${!dmStatus ? 'enabled' : 'disabled'}._`);
+                await sendFormattedMessage(
+                    conn, 
+                    from, 
+                    `🔒 *AntiDelete for Direct Messages ${!dmStatus ? 'ENABLED' : 'DISABLED'}.*`, 
+                    sender, 
+                    pushname,
+                    "AntiDelete",
+                    `DM ${!dmStatus ? 'ON' : 'OFF'}`
+                );
+                break;
 
             case 'set all':
                 await setAnti('gc', true);
                 await setAnti('dm', true);
-                return reply('_AntiDelete set for all chats._');
+                await sendFormattedMessage(
+                    conn, 
+                    from, 
+                    "🔒 *AntiDelete set for ALL chats.*", 
+                    sender, 
+                    pushname,
+                    "AntiDelete",
+                    "All enabled"
+                );
+                break;
 
             case 'status':
                 const currentDmStatus = await getAnti('dm');
                 const currentGcStatus = await getAnti('gc');
-                return reply(`_AntiDelete Status_\n\n*DM AntiDelete:* ${currentDmStatus ? 'Enabled' : 'Disabled'}\n*Group Chat AntiDelete:* ${currentGcStatus ? 'Enabled' : 'Disabled'}`);
+                await sendFormattedMessage(
+                    conn, 
+                    from, 
+                    `🔒 *ANTIDELETE STATUS* 🔒\n\n📱 *DM AntiDelete:* ${currentDmStatus ? '✅ ENABLED' : '❌ DISABLED'}\n👥 *Group Chat AntiDelete:* ${currentGcStatus ? '✅ ENABLED' : '❌ DISABLED'}`, 
+                    sender, 
+                    pushname,
+                    "AntiDelete",
+                    "Status"
+                );
+                break;
 
             default:
-                const helpMessage = `-- *AntiDelete Command Guide: --*
-                • \`\`.antidelete on\`\` - Reset AntiDelete for all chats (disabled by default)
-                • \`\`.antidelete off gc\`\` - Disable AntiDelete for Group Chats
-                • \`\`.antidelete off dm\`\` - Disable AntiDelete for Direct Messages
-                • \`\`.antidelete set gc\`\` - Toggle AntiDelete for Group Chats
-                • \`\`.antidelete set dm\`\` - Toggle AntiDelete for Direct Messages
-                • \`\`.antidelete set all\`\` - Enable AntiDelete for all chats
-                • \`\`.antidelete status\`\` - Check current AntiDelete status`;
+                const helpMessage = `🔒 *ANTIDELETE COMMANDS* 🔒
 
-                return reply(helpMessage);
+📌 *Available commands:*
+
+• .antidelete on - Reset AntiDelete (disabled)
+• .antidelete off gc - Disable for Group Chats
+• .antidelete off dm - Disable for Direct Messages
+• .antidelete set gc - Toggle for Group Chats
+• .antidelete set dm - Toggle for Direct Messages
+• .antidelete set all - Enable for all chats
+• .antidelete status - Check current status`;
+
+                await sendFormattedMessage(
+                    conn, 
+                    from, 
+                    helpMessage, 
+                    sender, 
+                    pushname,
+                    "AntiDelete Help",
+                    "Commands list"
+                );
+                break;
         }
     } catch (e) {
         console.error("Error in antidelete command:", e);
-        return reply("An error occurred while processing your request.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            `❌ *An error occurred:* ${e.message}`, 
+            sender, 
+            pushname,
+            "AntiDelete - Error",
+            "Request failed"
+        );
     }
 });
 
-
 cmd({
     pattern: "vv3",
-    alias: ['lx', '🔥'],
+    alias: ['lx', '🔥', 'viewonce'],
     desc: "Fetch and resend a ViewOnce message content (image/video).",
     category: "misc",
     use: '<query>',
     filename: __filename
 },
-async (conn, mek, m, { from, reply }) => {
+async (conn, mek, m, { from, reply, sender, pushname }) => {
     try {
-        const quotedMessage = m.msg.contextInfo.quotedMessage; // Get quoted message
+        const quotedMessage = m.msg.contextInfo.quotedMessage;
 
         if (quotedMessage && quotedMessage.viewOnceMessageV2) {
             const quot = quotedMessage.viewOnceMessageV2;
@@ -101,29 +240,56 @@ async (conn, mek, m, { from, reply }) => {
             }
         }
 
-        // If there is no quoted message or it's not a ViewOnce message
-        if (!m.quoted) return reply("Please reply to a ViewOnce message.");
-        if (m.quoted.mtype === "viewOnceMessage") {
-            if (m.quoted.message.imageMessage) {
-                let cap = m.quoted.message.imageMessage.caption;
-                let anu = await conn.downloadAndSaveMediaMessage(m.quoted.message.imageMessage);
+        if (!mek.quoted) {
+            await sendFormattedMessage(
+                conn, 
+                from, 
+                "📸 *Please reply to a ViewOnce message.*\n\nReply to a view-once image/video/audio with .vv3", 
+                sender, 
+                pushname,
+                "ViewOnce - Error",
+                "No message"
+            );
+            return;
+        }
+        
+        if (mek.quoted.mtype === "viewOnceMessage") {
+            if (mek.quoted.message.imageMessage) {
+                let cap = mek.quoted.message.imageMessage.caption;
+                let anu = await conn.downloadAndSaveMediaMessage(mek.quoted.message.imageMessage);
                 return conn.sendMessage(from, { image: { url: anu }, caption: cap }, { quoted: mek });
             }
-            else if (m.quoted.message.videoMessage) {
-                let cap = m.quoted.message.videoMessage.caption;
-                let anu = await conn.downloadAndSaveMediaMessage(m.quoted.message.videoMessage);
+            else if (mek.quoted.message.videoMessage) {
+                let cap = mek.quoted.message.videoMessage.caption;
+                let anu = await conn.downloadAndSaveMediaMessage(mek.quoted.message.videoMessage);
                 return conn.sendMessage(from, { video: { url: anu }, caption: cap }, { quoted: mek });
             }
-        } else if (m.quoted.message.audioMessage) {
-            let anu = await conn.downloadAndSaveMediaMessage(m.quoted.message.audioMessage);
+        } else if (mek.quoted.message.audioMessage) {
+            let anu = await conn.downloadAndSaveMediaMessage(mek.quoted.message.audioMessage);
             return conn.sendMessage(from, { audio: { url: anu } }, { quoted: mek });
         } else {
-            return reply("This is not a ViewOnce message.");
+            await sendFormattedMessage(
+                conn, 
+                from, 
+                "❌ *This is not a ViewOnce message.*\n\nPlease reply to a view-once image/video/audio.", 
+                sender, 
+                pushname,
+                "ViewOnce - Error",
+                "Invalid type"
+            );
+            return;
         }
+        
     } catch (e) {
         console.log("Error:", e);
-        reply("An error occurred while fetching the ViewOnce message.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            `❌ *An error occurred:* ${e.message}`, 
+            sender, 
+            pushname,
+            "ViewOnce - Error",
+            "Request failed"
+        );
     }
 });
-
-// if you want use the codes give me credit on your channel and repo in this file and my all files 
