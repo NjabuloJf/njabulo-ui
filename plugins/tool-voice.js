@@ -1,9 +1,55 @@
 const { cmd } = require('../command');
 const axios = require('axios');
+const config = require("../config");
+
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "AI Voice Generator",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
 
 cmd({
     pattern: "aivoice",
-    alias: ["vai", "voicex", "voiceai"],
+    alias: ["vai", "voicex", "voiceai", "ttsai"],
     desc: "Text to speech with different AI voices",
     category: "main",
     react: "🪃",
@@ -34,18 +80,22 @@ async (conn, mek, m, {
     reply 
 }) => {
     try {
-        // Check if args[0] exists (user provided text)
         if (!args[0]) {
-            return reply("Please provide text after the command.\nExample: .aivoice hello");
+            await sendFormattedMessage(
+                conn, 
+                from, 
+                "🎙️ *Please provide text for voice generation*\n\n📌 *Usage:* .aivoice Hello world\n🔍 *Example:* .aivoice Welcome to NJABULO UI", 
+                sender, 
+                pushname,
+                "AI Voice - Error",
+                "No text"
+            );
+            return;
         }
 
-        // Get the full input text
         const inputText = args.join(' ');
 
-        // Send initial reaction
-        await conn.sendMessage(from, {  
-            react: { text: '⏳', key: m.key }  
-        });
+        await conn.sendMessage(from, { react: { text: '⏳', key: m.key } });
 
         // Voice model menu
         const voiceModels = [
@@ -63,31 +113,38 @@ async (conn, mek, m, {
             { number: "12", name: "Eminem", model: "eminem" }
         ];
 
-        // Create menu text
-        let menuText = "╭━━━〔 *CRISS AI VOICE MODELS* 〕━━━⊷\n";
+        let menuText = `🎙️ *AI VOICE MODELS* 🎙️\n\n`;
         voiceModels.forEach(model => {
-            menuText += `┃▸ ${model.number}. ${model.name}\n`;
+            menuText += `${model.number}. ${model.name}\n`;
         });
-        menuText += "╰━━━⪼\n\n";
-        menuText += `📌 *Reply with the number to select voice model for:*\n"${inputText}"`;
+        menuText += `\n📌 *Reply with the number to select voice model for:*\n"${inputText.substring(0, 50)}${inputText.length > 50 ? '...' : ''}"`;
 
-        // Send menu message with image
-        const sentMsg = await conn.sendMessage(from, {  
-            image: { url: "https://files.catbox.moe/37xk9g.jpg" },
-            caption: menuText
-        }, { quoted: m });
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            menuText, 
+            sender, 
+            pushname,
+            "Voice Models",
+            `Text: ${inputText.substring(0, 30)}`
+        );
 
-        const messageID = sentMsg.key.id;
         let handlerActive = true;
 
-        // Set timeout to remove handler after 2 minutes
         const handlerTimeout = setTimeout(() => {
             handlerActive = false;
             conn.ev.off("messages.upsert", messageHandler);
-            reply("⌛ Voice selection timed out. Please try the command again.");
+            sendFormattedMessage(
+                conn, 
+                from, 
+                "⌛ *Voice selection timed out*\n\nPlease try the command again.", 
+                sender, 
+                pushname,
+                "AI Voice - Timeout",
+                "Selection timed out"
+            );
         }, 120000);
 
-        // Message handler function
         const messageHandler = async (msgData) => {  
             if (!handlerActive) return;
             
@@ -98,59 +155,99 @@ async (conn, mek, m, {
                               receivedMsg.message.extendedTextMessage?.text || 
                               receivedMsg.message.buttonsResponseMessage?.selectedButtonId;  
             const senderID = receivedMsg.key.remoteJid;  
-            const isReplyToBot = receivedMsg.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;  
+            const isReplyToBot = receivedMsg.message.extendedTextMessage?.contextInfo?.stanzaId === m.key.id;  
 
             if (isReplyToBot && senderID === from) {  
                 clearTimeout(handlerTimeout);
                 conn.ev.off("messages.upsert", messageHandler);
                 handlerActive = false;
 
-                await conn.sendMessage(senderID, {  
-                    react: { text: '⬇️', key: receivedMsg.key }  
-                });  
+                await conn.sendMessage(senderID, { react: { text: '⬇️', key: receivedMsg.key } });  
 
                 const selectedNumber = receivedText.trim();
                 const selectedModel = voiceModels.find(model => model.number === selectedNumber);
 
                 if (!selectedModel) {
-                    return reply("❌ Invalid option! Please reply with a number from the menu.");
+                    await sendFormattedMessage(
+                        conn, 
+                        from, 
+                        "❌ *Invalid option*\n\nPlease reply with a number from the menu (1-12).", 
+                        sender, 
+                        pushname,
+                        "AI Voice - Error",
+                        "Invalid selection"
+                    );
+                    return;
                 }
 
                 try {
-                    // Show processing message
-                    await conn.sendMessage(from, {  
-                        text: `🔊 Generating audio with ${selectedModel.name} voice...`  
-                    }, { quoted: receivedMsg });
+                    await sendFormattedMessage(
+                        conn, 
+                        from, 
+                        `🔊 *Generating audio with ${selectedModel.name} voice...*\n\n⏳ Please wait!`, 
+                        sender, 
+                        pushname,
+                        "AI Voice",
+                        `Voice: ${selectedModel.name}`
+                    );
 
-                    // Call the API
                     const apiUrl = `https://api.agatz.xyz/api/voiceover?text=${encodeURIComponent(inputText)}&model=${selectedModel.model}`;
-                    const response = await axios.get(apiUrl, {
-                        timeout: 30000 // 30 seconds timeout
-                    });
-                    
+                    const response = await axios.get(apiUrl, { timeout: 30000 });
                     const data = response.data;
 
                     if (data.status === 200) {
                         await conn.sendMessage(from, {  
                             audio: { url: data.data.oss_url },  
                             mimetype: "audio/mpeg"
-                            // Removed ptt: true to send as regular audio
                         }, { quoted: receivedMsg });
+                        
+                        await sendFormattedMessage(
+                            conn, 
+                            from, 
+                            `✅ *Audio generated successfully!*\n\n🎙️ *Voice:* ${selectedModel.name}\n📝 *Text:* ${inputText.substring(0, 50)}${inputText.length > 50 ? '...' : ''}`, 
+                            sender, 
+                            pushname,
+                            "AI Voice - Success",
+                            "Audio delivered"
+                        );
                     } else {
-                        reply("❌ Error generating audio. Please try again.");
+                        await sendFormattedMessage(
+                            conn, 
+                            from, 
+                            "❌ *Error generating audio*\n\nPlease try again.", 
+                            sender, 
+                            pushname,
+                            "AI Voice - Error",
+                            "Generation failed"
+                        );
                     }
                 } catch (error) {
                     console.error("API Error:", error);
-                    reply("❌ Error processing your request. Please try again.");
+                    await sendFormattedMessage(
+                        conn, 
+                        from, 
+                        `❌ *Error processing your request*\n\n${error.message}`, 
+                        sender, 
+                        pushname,
+                        "AI Voice - Error",
+                        "Request failed"
+                    );
                 }
             }  
         };
 
-        // Register the handler
         conn.ev.on("messages.upsert", messageHandler);
 
     } catch (error) {
         console.error("Command Error:", error);
-        reply("❌ An error occurred. Please try again.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            `❌ *An error occurred*\n\n${error.message}`, 
+            sender, 
+            pushname,
+            "AI Voice - Error",
+            "Command failed"
+        );
     }
 });
