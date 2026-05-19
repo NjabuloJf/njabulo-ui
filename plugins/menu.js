@@ -94,8 +94,39 @@ cmd({
         audio: { url: 'https://raw.githubusercontent.com/NjabuloJf/njabulo-data/main/audio/menu.mp3' },
         mimetype: 'audio/mpeg',
         ptt: false,  // ← Set to false for regular audio
-        fileName: 'menu.mp3'  // Optional: shows file name
-    }, { quoted: mek });
+        fileName: 'menu.mp3' ,// Optional: shows file name
+        contextInfo: {
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                }, 
+             forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: "title njabulo song 2026 (official)",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitm1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        }); 
 
         
 
