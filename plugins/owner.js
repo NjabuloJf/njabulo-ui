@@ -1,65 +1,106 @@
 const { cmd } = require('../command');
 const config = require('../config');
 
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "Owner Info",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
+
 cmd({
     pattern: "owner",
+    alias: ["creator", "dev", "master"],
     react: "✅", 
     desc: "Get owner number",
     category: "main",
     filename: __filename
 }, 
-async (conn, mek, m, { from }) => {
+async (conn, mek, m, { from, sender, pushname, reply }) => {
     try {
-        const ownerNumber = config.OWNER_NUMBER; // Fetch owner number from config
-        const ownerName = config.OWNER_NAME;     // Fetch owner name from config
+        const ownerNumber = config.OWNER_NUMBER || config.DEV;
+        const ownerName = config.OWNER_NAME || "NJABULO UI";
 
+        // Send vCard
         const vcard = 'BEGIN:VCARD\n' +
                       'VERSION:3.0\n' +
                       `FN:${ownerName}\n` +  
                       `TEL;type=CELL;type=VOICE;waid=${ownerNumber.replace('+', '')}:${ownerNumber}\n` + 
                       'END:VCARD';
 
-        // Send the vCard
-        const sentVCard = await conn.sendMessage(from, {
+        await conn.sendMessage(from, {
             contacts: {
                 displayName: ownerName,
                 contacts: [{ vcard }]
             }
         });
 
-        // Send the owner contact message with image and audio
-        await conn.sendMessage(from, {
-            image: { url: 'https://res.cloudinary.com/dgy2dutjs/image/upload/v1751624587/url.crissvevo.co.tz/IMG_2353_fze42l.jpg' }, // Image URL from your request
-            caption: `╭━━〔 *CRISS-AI* 〕━━┈⊷
-┃◈╭─────────────·๏
-┃◈┃• *Here is the owner details*
-┃◈┃• *Name* - ${ownerName}
-┃◈┃• *Number* ${ownerNumber}
-┃◈┃• *Version*: 2.0.0 Beta
-┃◈└───────────┈⊷
-╰──────────────┈⊷
-> © ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴄʀɪss ᴠᴇᴠᴏ`, // Display the owner's details
-            contextInfo: {
-                mentionedJid: [`${ownerNumber.replace('+', '')}@s.whatsapp.net`], 
-                forwardingScore: 999,
-                isForwarded: true,
-                forwardedNewsletterMessageInfo: {
-                    newsletterJid: '120363417599637828@newsletter',
-                    newsletterName: 'CRISS AI',
-                    serverMessageId: 143
-                }            
-            }
-        }, { quoted: mek });
+        const message = `👑 *BOT OWNER* 👑
 
-        // Send audio as per your request
-        await conn.sendMessage(from, {
-            audio: { url: 'https://github.com/criss-vevo/CRISS-DATA/raw/refs/heads/main/autovoice/menunew.m4a' }, // Audio URL
-            mimetype: 'audio/mp4',
-            ptt: true
-        }, { quoted: mek });
+📛 *Name:* ${ownerName}
+📱 *Number:* ${ownerNumber}
+🔰 *Version:* 2.0.0
+
+✅ *Contact saved!*`;
+
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            message, 
+            sender, 
+            pushname,
+            "Owner Information",
+            `Contact: ${ownerName}`
+        );
 
     } catch (error) {
         console.error(error);
-        reply(`An error occurred: ${error.message}`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            `❌ *An error occurred:* ${error.message}`, 
+            sender, 
+            pushname,
+            "Owner Info - Error",
+            "Request failed"
+        );
     }
 });
