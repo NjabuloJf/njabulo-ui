@@ -1,279 +1,211 @@
+const axios = require("axios");
+const yts = require("yt-search");
 const config = require('../config');
 const { cmd } = require('../command');
-const { ytsearch } = require('@dark-yasiya/yt-dl.js');
 
-// Formatted message function
-async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+cmd({
+    pattern: "play",
+    alias: ["song", "music", "audio"],
+    desc: "Search and play songs from YouTube",
+    category: "download",
+    react: "🎵",
+    filename: __filename
+},
+async (conn, mek, m, { from, args, q, reply, sender, pushname }) => {
     try {
+        if (!args[0]) {
+            const errorMsg = `🎵 *NJABULO UI MUSIC PLAYER* 🎵
+
+━━━━━━━━━━━━━━━━━━━━━━
+📌 *Please provide a song name*
+
+📝 *Example:* .play Shape of You
+🔍 *Usage:* .play <song name>
+
+━━━━━━━━━━━━━━━━━━━━━━
+✨ *NJABULO UI*`;
+
+            await conn.sendMessage(from, {
+                text: errorMsg,
+                contextInfo: {
+                    isForwarded: true,
+                    forwardingScore: 999,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: config.NEWSLETTER,
+                        newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                        serverMessageId: 143
+                    }
+                }
+            }, { quoted: mek });
+            return;
+        }
+
+        const query = args.join(' ');
+        
         await conn.sendMessage(from, {
-            text: text,
+            text: `🎵 *Searching for:* "${query}"\n\n⏳ Please wait...`,
             contextInfo: {
                 isForwarded: true,
-                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
-                body: bodyText || text,
+                forwardingScore: 999,
                 forwardedNewsletterMessageInfo: {
                     newsletterJid: config.NEWSLETTER,
                     newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
                     serverMessageId: 143
-                },
-                forwardingScore: 999,
-                externalAdReply: {
-                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
-                    body: externalBody || "Media Downloader",
-                    thumbnailUrl: config.FANAIMG,
-                    sourceUrl: config.NJABULOURL,
-                    mediaType: 1,
-                    renderSmallThumbnail: true
-                }
-            }
-        }, { 
-            quoted: {
-                key: {
-                    fromMe: false,
-                    participant: `0@s.whatsapp.net`,
-                    remoteJid: "status@broadcast"
-                },
-                message: {
-                    contactMessage: {
-                        displayName: userName || "User",
-                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
-                    }
-                }
-            }
-        });
-    } catch (err) {
-        console.error("Error in sendFormattedMessage:", err);
-        await conn.sendMessage(from, { text: text });
-    }
-}
-
-// MP4 video download
-cmd({ 
-    pattern: "mp4", 
-    alias: ["video", "ytvideo"], 
-    react: "🎥", 
-    desc: "Download YouTube video", 
-    category: "main", 
-    use: '.mp4 < Yt url or Name >', 
-    filename: __filename 
-}, async (conn, mek, m, { from, prefix, quoted, q, reply, sender, pushname }) => { 
-    try { 
-        if (!q) {
-            await sendFormattedMessage(
-                conn, 
-                from, 
-                "🎥 *Please provide a YouTube URL or video name*\n\n📌 *Usage:* .mp4 Shape of You\n🔍 *Example:* .mp4 https://youtube.com/watch?v=xxxxx", 
-                sender, 
-                pushname,
-                "Video Downloader - Error",
-                "No query"
-            );
-            return;
-        }
-        
-        await sendFormattedMessage(
-            conn, 
-            from, 
-            `🎥 *Searching for your video...*\n\n🔍 *Query:* ${q}\n⏳ Please wait!`, 
-            sender, 
-            pushname,
-            "Video Downloader",
-            "Searching"
-        );
-
-        const yt = await ytsearch(q);
-        if (yt.results.length < 1) {
-            await sendFormattedMessage(
-                conn, 
-                from, 
-                "❌ *No results found*\n\nPlease try a different video name.", 
-                sender, 
-                pushname,
-                "Video Downloader - Error",
-                "No results"
-            );
-            return;
-        }
-        
-        let yts = yt.results[0];  
-        let apiUrl = `https://apis.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(yts.url)}`;
-        
-        let response = await fetch(apiUrl);
-        let data = await response.json();
-        
-        if (data.status !== 200 || !data.success || !data.result.download_url) {
-            await sendFormattedMessage(
-                conn, 
-                from, 
-                "❌ *Failed to fetch the video*\n\nPlease try again later.", 
-                sender, 
-                pushname,
-                "Video Downloader - Error",
-                "Fetch failed"
-            );
-            return;
-        }
-
-        let ytmsg = `🎥 *VIDEO DOWNLOADER* 🎥
-
-🎬 *Title:* ${yts.title}
-⏳ *Duration:* ${yts.timestamp}
-👀 *Views:* ${yts.views}
-👤 *Author:* ${yts.author.name}
-
-━━━━━━━━━━━━━━━━
-✅ *Download complete!*`;
-
-        // Send video directly with caption
-        await conn.sendMessage(
-            from, 
-            { 
-                video: { url: data.result.download_url }, 
-                caption: ytmsg,
-                mimetype: "video/mp4"
-            }, 
-            { quoted: mek }
-        );
-
-        await sendFormattedMessage(
-            conn, 
-            from, 
-            `✅ *Video downloaded successfully!*\n\n🎬 *Title:* ${yts.title}\n\nEnjoy your video!`, 
-            sender, 
-            pushname,
-            "Video Downloader - Success",
-            "Video delivered"
-        );
-
-    } catch (e) {
-        console.log(e);
-        await sendFormattedMessage(
-            conn, 
-            from, 
-            `❌ *An error occurred*\n\n${e.message}\n\nPlease try again later.`, 
-            sender, 
-            pushname,
-            "Video Downloader - Error",
-            "Request failed"
-        );
-    }
-});
-
-// MP3 song download 
-cmd({ 
-    pattern: "song", 
-    alias: ["play", "mp3", "audio"], 
-    react: "🎶", 
-    desc: "Download YouTube song", 
-    category: "main", 
-    use: '.song <query>', 
-    filename: __filename 
-}, async (conn, mek, m, { from, sender, reply, q, pushname }) => { 
-    try {
-        if (!q) {
-            await sendFormattedMessage(
-                conn, 
-                from, 
-                "🎶 *Please provide a song name or YouTube link*\n\n📌 *Usage:* .song Shape of You\n🔍 *Example:* .song https://youtube.com/watch?v=xxxxx", 
-                sender, 
-                pushname,
-                "Audio Downloader - Error",
-                "No query"
-            );
-            return;
-        }
-
-        await sendFormattedMessage(
-            conn, 
-            from, 
-            `🎶 *Searching for your song...*\n\n🔍 *Query:* ${q}\n⏳ Please wait!`, 
-            sender, 
-            pushname,
-            "Audio Downloader",
-            "Searching"
-        );
-
-        const yt = await ytsearch(q);
-        if (!yt.results.length) {
-            await sendFormattedMessage(
-                conn, 
-                from, 
-                "❌ *No results found*\n\nPlease try a different song name.", 
-                sender, 
-                pushname,
-                "Audio Downloader - Error",
-                "No results"
-            );
-            return;
-        }
-
-        const song = yt.results[0];
-        
-        await sendFormattedMessage(
-            conn, 
-            from, 
-            `📥 *Downloading audio...*\n\n🎤 *Title:* ${song.title}\n⏳ Please wait!`, 
-            sender, 
-            pushname,
-            "Audio Downloader",
-            "Downloading"
-        );
-
-        const apiUrl = `https://noobs-api.top/dipto/ytDl3?link=${encodeURIComponent(song.url)}`;
-        const res = await fetch(apiUrl);
-        const data = await res.json();
-
-        if (!data?.result?.downloadUrl) {
-            await sendFormattedMessage(
-                conn, 
-                from, 
-                "❌ *Download failed*\n\nPlease try again later.", 
-                sender, 
-                pushname,
-                "Audio Downloader - Error",
-                "Download failed"
-            );
-            return;
-        }
-
-        await conn.sendMessage(from, {
-            audio: { url: data.result.downloadUrl },
-            mimetype: "audio/mpeg",
-            fileName: `${song.title}.mp3`,
-            contextInfo: {
-                externalAdReply: {
-                    title: song.title.length > 25 ? `${song.title.substring(0, 22)}...` : song.title,
-                    body: "Audio Downloader",
-                    mediaType: 1,
-                    thumbnailUrl: song.thumbnail.replace('default.jpg', 'hqdefault.jpg'),
-                    sourceUrl: 'https://whatsapp.com/channel/0029VbAhCy8EquiTSb5pMS3t',
-                    mediaUrl: 'https://whatsapp.com/channel/0029VbAhCy8EquiTSb5pMS3t',
-                    showAdAttribution: true,
-                    renderLargerThumbnail: true
                 }
             }
         }, { quoted: mek });
 
-        await sendFormattedMessage(
-            conn, 
-            from, 
-            `✅ *Audio downloaded successfully!*\n\n🎤 *Title:* ${song.title}\n\nEnjoy your music!`, 
-            sender, 
-            pushname,
-            "Audio Downloader - Success",
-            "Audio delivered"
-        );
+        const search = await yts(query);
+        
+        if (!search || !search.videos || !search.videos.length) {
+            await conn.sendMessage(from, {
+                text: `❌ *No results found for:* "${query}"\n\nPlease try a different song name.`,
+                contextInfo: {
+                    isForwarded: true,
+                    forwardingScore: 999,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: config.NEWSLETTER,
+                        newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                        serverMessageId: 143
+                    }
+                }
+            }, { quoted: mek });
+            return;
+        }
 
-    } catch (error) {
-        console.error(error);
-        await sendFormattedMessage(
-            conn, 
-            from, 
-            `❌ *An error occurred*\n\n${error.message}\n\nPlease try again later.`, 
-            sender, 
-            pushname,
-            "Audio Downloader - Error",
-            "Request failed"
-        );
+        // Send top 5 search results as text
+        let resultText = `🔍 *SEARCH RESULTS* 🔍
+
+📝 *Query:* ${query}
+━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+        for (let i = 0; i < Math.min(search.videos.length, 5); i++) {
+            const video = search.videos[i];
+            resultText += `\n${i + 1}. 🎵 *${video.title}*\n`;
+            resultText += `   ⏱ Duration: ${video.timestamp}\n`;
+            resultText += `   👁 Views: ${Number(video.views).toLocaleString()}\n`;
+            resultText += `   👤 Channel: ${video.author?.name || 'Unknown'}\n`;
+        }
+
+        resultText += `\n━━━━━━━━━━━━━━━━━━━━━━
+📌 *Reply with the number to download*
+⏳ *Example:* Reply with "1" for the first song`;
+
+        await conn.sendMessage(from, {
+            text: resultText,
+            contextInfo: {
+                isForwarded: true,
+                forwardingScore: 999,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                }
+            }
+        }, { quoted: mek });
+
+        // Send random reaction
+        const reactionEmojis = ['🔥', '⚡', '🚀', '💨', '🎯', '🎉', '🌟', '💥'];
+        const randomReaction = reactionEmojis[Math.floor(Math.random() * reactionEmojis.length)];
+        await conn.sendMessage(from, { react: { text: randomReaction, key: mek.key } });
+
+        // Set up message handler for user selection
+        const messageID = mek.key.id;
+        
+        const selectionHandler = async (msgData) => {
+            const receivedMsg = msgData.messages[0];
+            if (!receivedMsg?.message || !receivedMsg.key?.remoteJid) return;
+
+            const receivedText = receivedMsg.message.conversation || 
+                              receivedMsg.message.extendedTextMessage?.text;
+            
+            const isReplyToBot = receivedMsg.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
+            
+            if (isReplyToBot && receivedMsg.key.remoteJid === from) {
+                const selectedNum = parseInt(receivedText);
+                if (selectedNum >= 1 && selectedNum <= Math.min(search.videos.length, 5)) {
+                    const selectedVideo = search.videos[selectedNum - 1];
+                    
+                    await conn.sendMessage(from, {
+                        text: `📥 *Downloading:* ${selectedVideo.title}\n\n⏳ Please wait...`
+                    }, { quoted: receivedMsg });
+
+                    const apiURL = `https://noobs-api.top/dipto/ytDl3?link=${encodeURIComponent(selectedVideo.videoId)}&format=mp3`;
+                    
+                    try {
+                        const response = await axios.get(apiURL, { timeout: 30000 });
+                        
+                        if (response.status !== 200 || !response.data?.downloadLink) {
+                            await conn.sendMessage(from, {
+                                text: "❌ *Failed to retrieve download link*\n\nPlease try again later."
+                            }, { quoted: receivedMsg });
+                            return;
+                        }
+
+                        const downloadUrl = response.data.downloadLink;
+                        const safeTitle = selectedVideo.title.replace(/[\\/:*?"<>|]/g, '');
+                        const fileName = `${safeTitle}.mp3`;
+
+                        await conn.sendMessage(from, {
+                            audio: { url: downloadUrl },
+                            mimetype: 'audio/mpeg',
+                            fileName: fileName,
+                            contextInfo: {
+                                externalAdReply: {
+                                    title: selectedVideo.title.length > 40 ? `${selectedVideo.title.substring(0, 37)}...` : selectedVideo.title,
+                                    body: `🎵 ${selectedVideo.timestamp} • ${Number(selectedVideo.views).toLocaleString()} views`,
+                                    mediaType: 1,
+                                    previewType: 0,
+                                    thumbnailUrl: selectedVideo.thumbnail,
+                                    renderLargerThumbnail: true,
+                                    sourceUrl: `https://youtu.be/${selectedVideo.videoId}`,
+                                }
+                            }
+                        }, { quoted: receivedMsg });
+
+                        await conn.sendMessage(from, {
+                            text: `✅ *Song sent successfully!*\n\n🎤 *Title:* ${selectedVideo.title}\n⏱ *Duration:* ${selectedVideo.timestamp}\n\n✨ *Enjoy your music!* ✨`
+                        }, { quoted: receivedMsg });
+
+                        // Remove handler after successful download
+                        conn.ev.off("messages.upsert", selectionHandler);
+                        
+                    } catch (err) {
+                        console.error('[PLAY] API Error:', err);
+                        await conn.sendMessage(from, {
+                            text: `❌ *An error occurred*\n\n${err.message}\n\nPlease try again later.`
+                        }, { quoted: receivedMsg });
+                    }
+                } else {
+                    await conn.sendMessage(from, {
+                        text: `❌ *Invalid selection*\n\nPlease reply with a number between 1 and ${Math.min(search.videos.length, 5)}`
+                    }, { quoted: receivedMsg });
+                }
+                // Remove handler after any selection
+                conn.ev.off("messages.upsert", selectionHandler);
+            }
+        };
+
+        conn.ev.on("messages.upsert", selectionHandler);
+        
+        // Remove handler after 60 seconds
+        setTimeout(() => {
+            conn.ev.off("messages.upsert", selectionHandler);
+        }, 60000);
+
+    } catch (err) {
+        console.error('[PLAY] Error:', err);
+        await conn.sendMessage(from, {
+            text: `❌ *An error occurred*\n\n${err.message}\n\nPlease try again later.`,
+            contextInfo: {
+                isForwarded: true,
+                forwardingScore: 999,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                }
+            }
+        }, { quoted: mek });
     }
 });
