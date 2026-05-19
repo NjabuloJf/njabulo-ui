@@ -15,9 +15,9 @@ cmd({
 
         const now = new Date();
         const hours = now.getHours();
-        let greeting = "🌇 good morning";
-        if (hours >= 12 && hours < 18) greeting = "🌃 good afternoon";
-        else if (hours >= 18) greeting = "🏙️ good evening";
+        let greeting = "🌇Hello everyone good morning";
+        if (hours >= 12 && hours < 18) greeting = "🌃it's time to say goodafternoon";
+        else if (hours >= 18) greeting = "🏙️Am here good evening";
 
         const totalCommands = 350;
 
@@ -59,7 +59,16 @@ cmd({
                     newsletterJid: config.NEWSLETTER,
                     newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
                     serverMessageId: 143
-                },              
+                }, 
+             forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: greeting,
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
             }
         }, { 
             quoted: {
