@@ -54,7 +54,7 @@ cmd({
 > ${config.DESCRIPTION}`;
 
         const sentMsg = await conn.sendMessage(from, {
-         image: { url: config.MENU_IMAGE_URL},    
+         image: { url: config.FANAIMG},    
          caption: menuCaption,
          contextInfo: {
                 isForwarded: true,
@@ -87,7 +87,7 @@ cmd({
                 title: "DOWNLOAD MENU",
                 content: `━━━━━━━━━━━━━━━━━━━━━━
      DOWNLOAD MENU
-━━━━━━━━━━━━━━━━━━━━━━
+
 
 • facebook / fb / fbdl
 • mediafire / mfire
@@ -110,10 +110,7 @@ cmd({
 • gdrive
 • ssweb / screenshot
 • tiktoksearch / tiks
-• darama
-
-━━━━━━━━━━━━━━━━━━━━━━
-> ${config.DESCRIPTION}`
+• darama`
             },
             '2': {
                 title: "GROUP MENU",
