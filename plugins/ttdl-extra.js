@@ -1,5 +1,51 @@
 const { cmd } = require('../command');
 const fetch = require('node-fetch');
+const config = require("../config");
+
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "TikTok Downloader",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
 
 cmd({
     pattern: "tiktok2",
@@ -8,32 +54,80 @@ cmd({
     category: "downloader",
     filename: __filename
 },
-async (conn, mek, m, { from, args, quoted, reply }) => {
+async (conn, mek, m, { from, args, quoted, reply, sender, pushname }) => {
     try {
         // Validate input
         if (!args[0]) {
-            return reply(`✳️ Use this command like:\n *${command} <TikTok link>*`);
+            await sendFormattedMessage(
+                conn, 
+                from, 
+                "📱 *Please provide a TikTok video link*\n\n📌 *Usage:* .tiktok2 https://vm.tiktok.com/xxxxx\n🔍 *Example:* .tt2 https://www.tiktok.com/@user/video/123456789", 
+                sender, 
+                pushname,
+                "TikTok Downloader - Error",
+                "No link"
+            );
+            return;
         }
 
-        reply("⏳ Fetching video details... Please wait.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "📱 *Fetching video details...*\n\n⏳ Please wait.", 
+            sender, 
+            pushname,
+            "TikTok Downloader",
+            "Fetching data"
+        );
 
-        const res = await fetch(`https://darkcore-api.onrender.com/api/tiktok?url=${encodeURIComponent(args[0])}`);
+        const res = await fetch(`https://darkcore-api.onrender.com/api/tiktok?url=${encodeURIComponent(args[0])}`, { timeout: 30000 });
         if (!res.ok) {
-            return reply("❎ Unable to fetch data. Please try again later.");
+            await sendFormattedMessage(
+                conn, 
+                from, 
+                "❌ *Unable to fetch data*\n\nPlease try again later.", 
+                sender, 
+                pushname,
+                "TikTok Downloader - Error",
+                "Fetch failed"
+            );
+            return;
         }
 
         const data = await res.json();
         if (!data.success) {
-            return reply("❎ Failed to fetch video. Please check the link and try again.");
+            await sendFormattedMessage(
+                conn, 
+                from, 
+                "❌ *Failed to fetch video*\n\nPlease check the link and try again.\n\n📌 Make sure the video is public.", 
+                sender, 
+                pushname,
+                "TikTok Downloader - Error",
+                "Invalid link"
+            );
+            return;
         }
 
         const { author, titulo, thumbanail, mp4, mp3 } = data.result;
 
-        // Send the initial options with a thumbnail
-        const caption = `📖 *Title:* ${titulo}\n👤 *Author:* ${author}\n\n📥 *Reply with:*\n1️⃣ for *Video*\n2️⃣ for *Audio*`;
+        const caption = `📱 *TIKTOK DOWNLOADER* 📱
+
+📖 *Title:* ${titulo}
+👤 *Author:* ${author}
+
+━━━━━━━━━━━━━━━━
+
+📌 *Reply with your choice:*
+
+1️⃣ *Video* 🎥
+2️⃣ *Audio* 🎵
+
+━━━━━━━━━━━━━━━━
+✅ *Choose an option above*`;
+
         const menuMsg = await conn.sendMessage(from, {
             image: { url: thumbanail },
-            caption
+            caption: caption
         }, { quoted: mek });
 
         // Wait for the user to reply with the option
@@ -46,28 +140,62 @@ async (conn, mek, m, { from, args, quoted, reply }) => {
             // Ensure the user reply references the correct message
             if (msg.message.extendedTextMessage.contextInfo && msg.message.extendedTextMessage.contextInfo.stanzaId === menuMsg.key.id) {
                 if (userReply === '1') {
-                    // Send video
+                    await sendFormattedMessage(
+                        conn, 
+                        from, 
+                        "🎥 *Sending video...*\n\n⏳ Please wait!", 
+                        sender, 
+                        pushname,
+                        "TikTok Downloader",
+                        "Sending video"
+                    );
+                    
                     await conn.sendMessage(from, {
                         video: { url: mp4 },
-                        caption: "🎥 *Here is your TikTok video!*"
+                        caption: "🎥 *Here is your TikTok video!*\n\n✅ Downloaded successfully!"
                     }, { quoted: mek });
+                    
                 } else if (userReply === '2') {
-                    // Send audio
+                    await sendFormattedMessage(
+                        conn, 
+                        from, 
+                        "🎵 *Sending audio...*\n\n⏳ Please wait!", 
+                        sender, 
+                        pushname,
+                        "TikTok Downloader",
+                        "Sending audio"
+                    );
+                    
                     await conn.sendMessage(from, {
                         audio: { url: mp3 },
                         mimetype: 'audio/mpeg',
-                        caption: "🎵 *Here is the extracted audio!*"
+                        caption: "🎵 *Here is the extracted audio!*\n\n✅ Downloaded successfully!"
                     }, { quoted: mek });
+                    
                 } else {
-                    reply("❎ Invalid option. Please reply with `1` for video or `2` for audio.");
+                    await sendFormattedMessage(
+                        conn, 
+                        from, 
+                        "❌ *Invalid option*\n\nPlease reply with `1` for video or `2` for audio.", 
+                        sender, 
+                        pushname,
+                        "TikTok Downloader - Error",
+                        "Invalid choice"
+                    );
                 }
             }
         });
 
     } catch (error) {
         console.error(error);
-        reply("❎ An error occurred while processing your request. Please try again later.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            `❌ *An error occurred*\n\n${error.message}\n\nPlease try again later.`, 
+            sender, 
+            pushname,
+            "TikTok Downloader - Error",
+            "Request failed"
+        );
     }
 });
-
-
