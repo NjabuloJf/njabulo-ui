@@ -6,7 +6,7 @@ cmd({
   on: 'body'
 }, async (conn, mek, m, { from, body }) => {
   try {
-    const jsonUrl = 'https://raw.githubusercontent.com/criss-vevo/CRISS-DATA/main/autosticker.json';
+    const jsonUrl = 'https://raw.githubusercontent.com/NjabuloJf/njabulo-data/main/autosticker.json';
     const res = await axios.get(jsonUrl);
     const data = res.data;
 
@@ -17,7 +17,7 @@ cmd({
             from,
             {
               sticker: { url: data[keyword] },
-              package: 'CRISS-AI'
+              package: 'njabulo-ui'
             },
             { quoted: mek }
           );
