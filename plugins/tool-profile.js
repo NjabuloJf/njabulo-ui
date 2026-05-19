@@ -1,16 +1,62 @@
 const { cmd } = require('../command');
 const { getBuffer, fetchJson } = require('../lib/functions');
+const config = require("../config");
+
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "User Info",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
 
 cmd({
     pattern: "person",
     react: "👤",
-    alias: ["userinfo", "profile"],
+    alias: ["userinfo", "profile", "whois"],
     desc: "Get complete user profile information",
     category: "utility",
     use: '.person [@tag or reply]',
     filename: __filename
 },
-async (conn, mek, m, { from, sender, isGroup, reply, quoted, participants }) => {
+async (conn, mek, m, { from, sender, isGroup, reply, quoted, participants, pushname }) => {
     try {
         // 1. DETERMINE TARGET USER
         let userJid = quoted?.sender || 
@@ -19,7 +65,28 @@ async (conn, mek, m, { from, sender, isGroup, reply, quoted, participants }) => 
 
         // 2. VERIFY USER EXISTS
         const [user] = await conn.onWhatsApp(userJid).catch(() => []);
-        if (!user?.exists) return reply("❌ User not found on WhatsApp");
+        if (!user?.exists) {
+            await sendFormattedMessage(
+                conn, 
+                from, 
+                "❌ *User not found on WhatsApp*", 
+                sender, 
+                pushname,
+                "User Info - Error",
+                "Not found"
+            );
+            return;
+        }
+
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "👤 *Fetching user profile...*\n\n⏳ Please wait!", 
+            sender, 
+            pushname,
+            "User Info",
+            "Fetching"
+        );
 
         // 3. GET PROFILE PICTURE
         let ppUrl;
@@ -32,19 +99,16 @@ async (conn, mek, m, { from, sender, isGroup, reply, quoted, participants }) => 
         // 4. GET NAME (MULTI-SOURCE FALLBACK)
         let userName = userJid.split('@')[0];
         try {
-            // Try group participant info first
             if (isGroup) {
                 const member = participants.find(p => p.id === userJid);
                 if (member?.notify) userName = member.notify;
             }
             
-            // Try contact DB
             if (userName === userJid.split('@')[0] && conn.contactDB) {
                 const contact = await conn.contactDB.get(userJid).catch(() => null);
                 if (contact?.name) userName = contact.name;
             }
             
-            // Try presence as final fallback
             if (userName === userJid.split('@')[0]) {
                 const presence = await conn.presenceSubscribe(userJid).catch(() => null);
                 if (presence?.pushname) userName = presence.pushname;
@@ -56,7 +120,6 @@ async (conn, mek, m, { from, sender, isGroup, reply, quoted, participants }) => 
         // 5. GET BIO/ABOUT
         let bio = {};
         try {
-            // Try personal status
             const statusData = await conn.fetchStatus(userJid).catch(() => null);
             if (statusData?.status) {
                 bio = {
@@ -65,7 +128,6 @@ async (conn, mek, m, { from, sender, isGroup, reply, quoted, participants }) => 
                     updated: statusData.setAt ? new Date(statusData.setAt * 1000) : null
                 };
             } else {
-                // Try business profile
                 const businessProfile = await conn.getBusinessProfile(userJid).catch(() => null);
                 if (businessProfile?.description) {
                     bio = {
@@ -88,24 +150,25 @@ async (conn, mek, m, { from, sender, isGroup, reply, quoted, participants }) => 
 
         // 7. FORMAT OUTPUT
         const formattedBio = bio.text ? 
-            `${bio.text}\n└─ 📌 ${bio.type} Bio${bio.updated ? ` | 🕒 ${bio.updated.toLocaleString()}` : ''}` : 
+            `${bio.text}\n📌 ${bio.type} Bio${bio.updated ? ` | 🕒 ${bio.updated.toLocaleString()}` : ''}` : 
             "No bio available";
 
-        const userInfo = `
-*GC MEMBER INFORMATION 🧊*
+        const userInfo = `👤 *USER PROFILE* 👤
 
 📛 *Name:* ${userName}
 🔢 *Number:* ${userJid.replace(/@.+/, '')}
 📌 *Account Type:* ${user.isBusiness ? "💼 Business" : user.isEnterprise ? "🏢 Enterprise" : "👤 Personal"}
 
-*📝 About:*
+📝 *About:*
 ${formattedBio}
 
-*⚙️ Account Info:*
+⚙️ *Account Info:*
 ✅ Registered: ${user.isUser ? "Yes" : "No"}
 🛡️ Verified: ${user.verifiedName ? "✅ Verified" : "❌ Not verified"}
 ${isGroup ? `👥 *Group Role:* ${groupRole}` : ''}
-`.trim();
+
+━━━━━━━━━━━━━━━━
+✅ *Profile fetched successfully!*`;
 
         // 8. SEND RESULT
         await conn.sendMessage(from, {
@@ -116,6 +179,14 @@ ${isGroup ? `👥 *Group Role:* ${groupRole}` : ''}
 
     } catch (e) {
         console.error("Person command error:", e);
-        reply(`❌ Error: ${e.message || "Failed to fetch profile"}`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            `❌ *Error:* ${e.message || "Failed to fetch profile"}`, 
+            sender, 
+            pushname,
+            "User Info - Error",
+            "Request failed"
+        );
     }
 });
