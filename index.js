@@ -135,9 +135,9 @@ const port = process.env.PORT || 9090;
   console.log('Plugins installed successful ✅')
   console.log('Bot connected to whatsapp ✅')
   
-  let up = `┏──────────────⊷
-┊ ɴᴀᴍᴇ : *ɴנαႦυℓσ נႦ is online*
-┗──────────────⊷
+  let up = `▬▬▬▬▬▬▬▬▬▬
+*ɴᴀᴍᴇ : ɴנαႦυℓσ נႦ*
+▬▬▬▬▬▬▬▬▬▬
 ┏ *【 ᴅᴇᴠɪᴄᴇ ᴏɴʟɪɴᴇ 】⇳︎*
 - . ① *ᴘɪɴɢ*
 - . ② *ᴍᴇɴᴜ*
@@ -145,10 +145,38 @@ const port = process.env.PORT || 9090;
 - . ④ *ᴜᴘᴅᴀᴛᴇ*
 - . ⑤ *ᴜᴘᴛɪᴍᴇ*
 ┗
-┏──────────────⊷
-┊ *[ɴᴊᴀʙᴜʟᴏ ᴊʙ ᴄᴏɴɴᴇᴄᴛᴇᴅ ᴛᴏ ʟɪɴᴋᴇᴅ ᴅᴇᴠɪᴄᴇ]*
-┗──────────────⊷`;
-    conn.sendMessage(conn.user.id, { image: { url: `https://files.catbox.moe/cigxgs.jpg` }, caption: up })
+▬▬▬▬▬▬▬▬▬▬
+
+🔗 *Link bot njabulobot.vercel.app/njabulobot*
+🔗 *Link info njabulobot.vercel.app*
+*[ɴᴊᴀʙᴜʟᴏ ᴊʙ ᴄᴏɴɴᴇᴄᴛᴇᴅ ᴛᴏ ʟɪɴᴋᴇᴅ ᴅᴇᴠɪᴄᴇ]*
+▬▬▬▬▬▬▬▬▬▬`;
+    conn.sendMessage(conn.user.id, {
+		image: { url: config.FANAIMG},    
+         caption: menuCaption,
+         contextInfo: {
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },              
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitm1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
   }
   })
   conn.ev.on('creds.update', saveCreds)
