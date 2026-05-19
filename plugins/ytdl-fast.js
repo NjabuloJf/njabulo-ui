@@ -73,26 +73,59 @@ async (conn, mek, m, { from, args, q, reply, sender, pushname }) => {
             return;
         }
 
-        // Send top 5 search results as text
-        let resultText = `🔍 *SEARCH RESULTS* 🔍
+        // Get the best match (first result)
+        const bestMatch = search.videos[0];
+        
+        // Format duration
+        let duration = bestMatch.timestamp || 'Unknown';
+        
+        // Format views
+        let views = Number(bestMatch.views).toLocaleString() || 'Unknown';
+        
+        // Format uploaded time
+        let uploaded = bestMatch.ago || 'Unknown';
+        
+        // Get artist/channel name
+        let artist = bestMatch.author?.name || 'Unknown Artist';
+        
+        // Get video title
+        let title = bestMatch.title || 'Unknown Title';
+        
+        // Get thumbnail (best quality)
+        let thumbnail = bestMatch.thumbnail || 'https://i.ibb.co/KhYC4FY/1221bc0bdd2354b42b293317ff2adbcf-icon.png';
+        
+        // Create beautiful song info message with image
+        const songInfo = `🎵 *NJABULO UI MUSIC PLAYER* 🎵
 
-📝 *Query:* ${query}
-━━━━━━━━━━━━━━━━━━━━━━\n`;
+━━━━━━━━━━━━━━━━━━━━━━
 
-        for (let i = 0; i < Math.min(search.videos.length, 5); i++) {
-            const video = search.videos[i];
-            resultText += `\n${i + 1}. 🎵 *${video.title}*\n`;
-            resultText += `   ⏱ Duration: ${video.timestamp}\n`;
-            resultText += `   👁 Views: ${Number(video.views).toLocaleString()}\n`;
-            resultText += `   👤 Channel: ${video.author?.name || 'Unknown'}\n`;
-        }
+🎤 *TITLE:* 
+${title}
 
-        resultText += `\n━━━━━━━━━━━━━━━━━━━━━━
-📌 *Reply with the number to download*
-⏳ *Example:* Reply with "1" for the first song`;
+👤 *ARTIST:* 
+${artist}
 
+⏱ *DURATION:* 
+${duration}
+
+👁 *VIEWS:* 
+${views}
+
+📅 *UPLOADED:* 
+${uploaded}
+
+🔗 *WATCH ON YOUTUBE:*
+https://youtu.be/${bestMatch.videoId}
+
+━━━━━━━━━━━━━━━━━━━━━━
+📥 *Downloading your song...*
+
+✨ *NJABULO UI*`;
+
+        // Send image with song info
         await conn.sendMessage(from, {
-            text: resultText,
+            image: { url: thumbnail },
+            caption: songInfo,
             contextInfo: {
                 isForwarded: true,
                 forwardingScore: 999,
@@ -100,98 +133,112 @@ async (conn, mek, m, { from, args, q, reply, sender, pushname }) => {
                     newsletterJid: config.NEWSLETTER,
                     newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
                     serverMessageId: 143
+                },
+                externalAdReply: {
+                    title: title.length > 35 ? `${title.substring(0, 32)}...` : title,
+                    body: `🎵 By ${artist}`,
+                    mediaType: 1,
+                    thumbnailUrl: thumbnail,
+                    sourceUrl: `https://youtu.be/${bestMatch.videoId}`,
+                    renderLargerThumbnail: true
                 }
             }
         }, { quoted: mek });
 
         // Send random reaction
-        const reactionEmojis = ['🔥', '⚡', '🚀', '💨', '🎯', '🎉', '🌟', '💥'];
+        const reactionEmojis = ['🔥', '⚡', '🚀', '💨', '🎯', '🎉', '🌟', '💥', '🎵', '🎶'];
         const randomReaction = reactionEmojis[Math.floor(Math.random() * reactionEmojis.length)];
         await conn.sendMessage(from, { react: { text: randomReaction, key: mek.key } });
 
-        // Set up message handler for user selection
-        const messageID = mek.key.id;
+        // Download the audio
+        const apiURL = `https://noobs-api.top/dipto/ytDl3?link=${encodeURIComponent(bestMatch.videoId)}&format=mp3`;
         
-        const selectionHandler = async (msgData) => {
-            const receivedMsg = msgData.messages[0];
-            if (!receivedMsg?.message || !receivedMsg.key?.remoteJid) return;
-
-            const receivedText = receivedMsg.message.conversation || 
-                              receivedMsg.message.extendedTextMessage?.text;
+        try {
+            const response = await axios.get(apiURL, { timeout: 30000 });
             
-            const isReplyToBot = receivedMsg.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
-            
-            if (isReplyToBot && receivedMsg.key.remoteJid === from) {
-                const selectedNum = parseInt(receivedText);
-                if (selectedNum >= 1 && selectedNum <= Math.min(search.videos.length, 5)) {
-                    const selectedVideo = search.videos[selectedNum - 1];
-                    
-                    await conn.sendMessage(from, {
-                        text: `📥 *Downloading:* ${selectedVideo.title}\n\n⏳ Please wait...`
-                    }, { quoted: receivedMsg });
-
-                    const apiURL = `https://noobs-api.top/dipto/ytDl3?link=${encodeURIComponent(selectedVideo.videoId)}&format=mp3`;
-                    
-                    try {
-                        const response = await axios.get(apiURL, { timeout: 30000 });
-                        
-                        if (response.status !== 200 || !response.data?.downloadLink) {
-                            await conn.sendMessage(from, {
-                                text: "❌ *Failed to retrieve download link*\n\nPlease try again later."
-                            }, { quoted: receivedMsg });
-                            return;
+            if (response.status !== 200 || !response.data?.downloadLink) {
+                await conn.sendMessage(from, {
+                    text: "❌ *Failed to retrieve download link*\n\nPlease try again later.",
+                    contextInfo: {
+                        isForwarded: true,
+                        forwardingScore: 999,
+                        forwardedNewsletterMessageInfo: {
+                            newsletterJid: config.NEWSLETTER,
+                            newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                            serverMessageId: 143
                         }
-
-                        const downloadUrl = response.data.downloadLink;
-                        const safeTitle = selectedVideo.title.replace(/[\\/:*?"<>|]/g, '');
-                        const fileName = `${safeTitle}.mp3`;
-
-                        await conn.sendMessage(from, {
-                            audio: { url: downloadUrl },
-                            mimetype: 'audio/mpeg',
-                            fileName: fileName,
-                            contextInfo: {
-                                externalAdReply: {
-                                    title: selectedVideo.title.length > 40 ? `${selectedVideo.title.substring(0, 37)}...` : selectedVideo.title,
-                                    body: `🎵 ${selectedVideo.timestamp} • ${Number(selectedVideo.views).toLocaleString()} views`,
-                                    mediaType: 1,
-                                    previewType: 0,
-                                    thumbnailUrl: selectedVideo.thumbnail,
-                                    renderLargerThumbnail: true,
-                                    sourceUrl: `https://youtu.be/${selectedVideo.videoId}`,
-                                }
-                            }
-                        }, { quoted: receivedMsg });
-
-                        await conn.sendMessage(from, {
-                            text: `✅ *Song sent successfully!*\n\n🎤 *Title:* ${selectedVideo.title}\n⏱ *Duration:* ${selectedVideo.timestamp}\n\n✨ *Enjoy your music!* ✨`
-                        }, { quoted: receivedMsg });
-
-                        // Remove handler after successful download
-                        conn.ev.off("messages.upsert", selectionHandler);
-                        
-                    } catch (err) {
-                        console.error('[PLAY] API Error:', err);
-                        await conn.sendMessage(from, {
-                            text: `❌ *An error occurred*\n\n${err.message}\n\nPlease try again later.`
-                        }, { quoted: receivedMsg });
                     }
-                } else {
-                    await conn.sendMessage(from, {
-                        text: `❌ *Invalid selection*\n\nPlease reply with a number between 1 and ${Math.min(search.videos.length, 5)}`
-                    }, { quoted: receivedMsg });
-                }
-                // Remove handler after any selection
-                conn.ev.off("messages.upsert", selectionHandler);
+                }, { quoted: mek });
+                return;
             }
-        };
 
-        conn.ev.on("messages.upsert", selectionHandler);
-        
-        // Remove handler after 60 seconds
-        setTimeout(() => {
-            conn.ev.off("messages.upsert", selectionHandler);
-        }, 60000);
+            const downloadUrl = response.data.downloadLink;
+            const safeTitle = title.replace(/[\\/:*?"<>|]/g, '');
+            const fileName = `${safeTitle} - ${artist}.mp3`;
+
+            // Send the audio file
+            await conn.sendMessage(from, {
+                audio: { url: downloadUrl },
+                mimetype: 'audio/mpeg',
+                fileName: fileName,
+                contextInfo: {
+                    externalAdReply: {
+                        title: title.length > 40 ? `${title.substring(0, 37)}...` : title,
+                        body: `🎵 By ${artist} • ${duration}`,
+                        mediaType: 1,
+                        previewType: 0,
+                        thumbnailUrl: thumbnail,
+                        renderLargerThumbnail: true,
+                        sourceUrl: `https://youtu.be/${bestMatch.videoId}`,
+                    }
+                }
+            }, { quoted: mek });
+
+            const successMsg = `✅ *SONG DOWNLOADED!* ✅
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+🎤 *TITLE:* ${title}
+👤 *ARTIST:* ${artist}
+⏱ *DURATION:* ${duration}
+👁 *VIEWS:* ${views}
+📅 *UPLOADED:* ${uploaded}
+
+━━━━━━━━━━━━━━━━━━━━━━
+🎵 *File saved as:* 
+${fileName}
+
+━━━━━━━━━━━━━━━━━━━━━━
+✨ *Enjoy your music!* ✨`;
+
+            await conn.sendMessage(from, {
+                text: successMsg,
+                contextInfo: {
+                    isForwarded: true,
+                    forwardingScore: 999,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: config.NEWSLETTER,
+                        newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                        serverMessageId: 143
+                    }
+                }
+            }, { quoted: mek });
+
+        } catch (err) {
+            console.error('[PLAY] API Error:', err);
+            await conn.sendMessage(from, {
+                text: `❌ *An error occurred*\n\n${err.message}\n\nPlease try again later.`,
+                contextInfo: {
+                    isForwarded: true,
+                    forwardingScore: 999,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: config.NEWSLETTER,
+                        newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                        serverMessageId: 143
+                    }
+                }
+            }, { quoted: mek });
+        }
 
     } catch (err) {
         console.error('[PLAY] Error:', err);
