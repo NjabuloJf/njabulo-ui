@@ -153,16 +153,31 @@ const port = process.env.PORT || 9090;
 ▬▬▬▬▬▬▬▬▬▬`;
     conn.sendMessage(conn.user.id, {
 		image: { url: config.FANAIMG},    
-         caption: menuCaption,
-         contextInfo: {
+         caption: up,
+		    contextInfo: {
                 isForwarded: true,
                 forwardedNewsletterMessageInfo: {
                     newsletterJid: config.NEWSLETTER,
                     newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
                     serverMessageId: 143
-                },              
-		 }
+                },
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
         });
+
   }
   })
   conn.ev.on('creds.update', saveCreds)
