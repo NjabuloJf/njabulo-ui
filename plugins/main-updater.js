@@ -4,47 +4,150 @@ const fs = require('fs');
 const path = require("path");
 const AdmZip = require("adm-zip");
 const { setCommitHash, getCommitHash } = require('../data/updateDB');
+const config = require("../config");
+
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "Update System",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
 
 cmd({
     pattern: "update",
-    alias: ["upgrade", "sync"],
+    alias: ["upgrade", "sync", "gitpull"],
     react: '🆕',
     desc: "Update the bot to the latest version.",
-    category: "misc",
+    category: "owner",
     filename: __filename
-}, async (client, message, args, { reply, isOwner }) => {
-    if (!isOwner) return reply("This command is only for the bot owner.");
+}, async (conn, mek, m, { from, reply, isOwner, sender, pushname }) => {
+    if (!isOwner) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *This command is only for the bot owner.*", 
+            sender, 
+            pushname,
+            "Update - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
     try {
-        await reply("🔍 Checking for CRISS-AI updates...");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "🔍 *Checking for updates...*\n\n⏳ Please wait!", 
+            sender, 
+            pushname,
+            "Update",
+            "Checking"
+        );
 
         // Fetch the latest commit hash from GitHub
-        const { data: commitData } = await axios.get("https://api.github.com/repos/criss-vevo/CRISS-AI/commits/main");
+        const { data: commitData } = await axios.get("https://api.github.com/repos/NjabuloJf/njabulo-ui/commits/main", { timeout: 15000 });
         const latestCommitHash = commitData.sha;
 
         // Get the stored commit hash from the database
         const currentHash = await getCommitHash();
 
         if (latestCommitHash === currentHash) {
-            return reply("✅ Your CRISS-AI bot is already up-to-date!");
+            await sendFormattedMessage(
+                conn, 
+                from, 
+                "✅ *Your bot is already up-to-date!*", 
+                sender, 
+                pushname,
+                "Update",
+                "Already latest"
+            );
+            return;
         }
 
-        await reply("🚀 Updating CRISS-AI Bot...");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "🚀 *Updating bot...*\n\n📦 Downloading latest version...", 
+            sender, 
+            pushname,
+            "Update",
+            "Downloading"
+        );
 
         // Download the latest code
         const zipPath = path.join(__dirname, "latest.zip");
-        const { data: zipData } = await axios.get("https://github.com/criss-vevo/CRISS-AI/archive/main.zip", { responseType: "arraybuffer" });
+        const { data: zipData } = await axios.get("https://github.com/NjabuloJf/njabulo-ui/archive/main.zip", { 
+            responseType: "arraybuffer",
+            timeout: 60000 
+        });
         fs.writeFileSync(zipPath, zipData);
 
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "📦 *Extracting the latest code...*", 
+            sender, 
+            pushname,
+            "Update",
+            "Extracting"
+        );
+
         // Extract ZIP file
-        await reply("📦 Extracting the latest code...");
         const extractPath = path.join(__dirname, 'latest');
         const zip = new AdmZip(zipPath);
         zip.extractAllTo(extractPath, true);
 
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "🔄 *Replacing files...*", 
+            sender, 
+            pushname,
+            "Update",
+            "Replacing"
+        );
+
         // Copy updated files, preserving config.js and app.json
-        await reply("🔄 Replacing files...");
-        const sourcePath = path.join(extractPath, "CRISS-AI-main");
+        const sourcePath = path.join(extractPath, "njabulo-ui-main");
         const destinationPath = path.join(__dirname, '..');
         copyFolderSync(sourcePath, destinationPath);
 
@@ -55,11 +158,28 @@ cmd({
         fs.unlinkSync(zipPath);
         fs.rmSync(extractPath, { recursive: true, force: true });
 
-        await reply("✅ Update complete! Restarting the bot...");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Update complete!*\n\n🔄 Restarting the bot...", 
+            sender, 
+            pushname,
+            "Update",
+            "Complete"
+        );
+        
         process.exit(0);
     } catch (error) {
         console.error("Update error:", error);
-        return reply("❌ Update failed. Please try manually.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            `❌ *Update failed:* ${error.message}\n\nPlease try manually.`, 
+            sender, 
+            pushname,
+            "Update - Error",
+            "Failed"
+        );
     }
 });
 
@@ -86,4 +206,4 @@ function copyFolderSync(source, target) {
             fs.copyFileSync(srcPath, destPath);
         }
     }
-}
+            }
