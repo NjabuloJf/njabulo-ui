@@ -2,6 +2,51 @@ const config = require('../config');
 const { cmd } = require('../command');
 const axios = require('axios');
 
+// Formatted message function for errors
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "Bot Error",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
+
 cmd({
   on: "body"
 }, async (conn, m, { isGroup }) => {
@@ -40,13 +85,13 @@ cmd({
           forwardingScore: 999,
           isForwarded: true,
           externalAdReply: {
-            title: config.BOT_NAME || "CRISS-AI 🥀",
-            body: config.DESCRIPTION || "POWERED BY CRISS VEVO 🤌💗",
+            title: config.BOT_NAME || "NJABULO UI",
+            body: config.DESCRIPTION || "WhatsApp Bot",
             mediaType: 1,
             renderLargerThumbnail: true,
             thumbnail: thumbnailBuffer,
-            mediaUrl: "https://files.catbox.moe/4ggu0a.jpg", // Static image URL
-            sourceUrl: "https://whatsapp.com/channel/0029VbAhCy8EquiTSb5pMS3t",
+            mediaUrl: "https://files.catbox.moe/4ggu0a.jpg",
+            sourceUrl: config.NJABULOURL || "https://whatsapp.com/channel/0029VbAhCy8EquiTSb5pMS3t",
             showAdAttribution: true
           }
         }
@@ -55,8 +100,14 @@ cmd({
   } catch (e) {
     console.error(e);
     const ownerJid = conn.user.id.split(":")[0] + "@s.whatsapp.net";
-    await conn.sendMessage(ownerJid, {
-      text: `*Bot Error in Mention Handler:*\n${e.message}`
-    });
+    await sendFormattedMessage(
+      conn, 
+      ownerJid, 
+      `❌ *Bot Error in Mention Handler:*\n\n${e.message}`, 
+      ownerJid, 
+      "Owner",
+      "Bot Error",
+      "Mention handler error"
+    );
   }
 });
