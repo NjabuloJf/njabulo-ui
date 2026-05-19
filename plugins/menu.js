@@ -54,18 +54,30 @@ cmd({
 > ${config.DESCRIPTION}`;
 
         const sentMsg = await conn.sendMessage(from, {
-            text: menuCaption,
-            contextInfo: {
-                mentionedJid: [m.sender],
-                forwardingScore: 999,
+         text: menuCaption,
+         contextInfo: {
                 isForwarded: true,
                 forwardedNewsletterMessageInfo: {
                     newsletterJid: config.NEWSLETTER,
-                    newsletterName: config.BOT_NAME,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
                     serverMessageId: 143
+                },              
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitm1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
                 }
             }
-        }, { quoted: mek });
+        });
 
         const messageID = sentMsg.key.id;
 
@@ -563,19 +575,31 @@ cmd({
                 if (menuData[receivedText]) {
                     const selectedMenu = menuData[receivedText];
                     
-                    await conn.sendMessage(senderID, {
-                        text: selectedMenu.content,
-                        contextInfo: {
-                            mentionedJid: [m.sender],
-                            forwardingScore: 999,
-                            isForwarded: true,
-                            forwardedNewsletterMessageInfo: {
-                                newsletterJid: config.NEWSLETTER,
-                                newsletterName: config.BOT_NAME,
-                                serverMessageId: 143
-                            }
-                        }
-                    }, { quoted: receivedMsg });
+               await conn.sendMessage(senderID, {
+                text: selectedMenu.content,
+                contextInfo: {
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+            }
+        }, { 
+            quoted: {
+                receivedMsg: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
 
                     await conn.sendMessage(senderID, { react: { text: '✅', key: receivedMsg.key } });
 
