@@ -1,6 +1,52 @@
 const converter = require('../data/converter');
 const stickerConverter = require('../data/sticker-converter');
 const { cmd } = require('../command');
+const config = require("../config");
+
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "Media Converter",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
 
 cmd({
     pattern: 'convert',
@@ -9,142 +55,256 @@ cmd({
     category: 'media',
     react: '🖼️',
     filename: __filename
-}, async (client, match, message, { from }) => {
-    // Input validation
-    if (!message.quoted) {
-        return await client.sendMessage(from, {
-            text: "✨ *Sticker Converter*\n\nPlease reply to a sticker message\n\nExample: `.convert` (reply to sticker)"
-        }, { quoted: message });
+}, async (conn, mek, m, { from, sender, pushname }) => {
+    if (!mek.quoted) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "🖼️ *Sticker Converter*\n\n📌 *Usage:* Reply to a sticker with .convert", 
+            sender, 
+            pushname,
+            "Sticker to Image - Error",
+            "No sticker"
+        );
+        return;
     }
 
-    if (message.quoted.mtype !== 'stickerMessage') {
-        return await client.sendMessage(from, {
-            text: "❌ Only sticker messages can be converted"
-        }, { quoted: message });
+    if (mek.quoted.mtype !== 'stickerMessage') {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only sticker messages can be converted*", 
+            sender, 
+            pushname,
+            "Sticker to Image - Error",
+            "Invalid type"
+        );
+        return;
     }
 
-    // Send processing message
-    await client.sendMessage(from, {
-        text: "🔄 Converting sticker to image..."
-    }, { quoted: message });
+    await sendFormattedMessage(
+        conn, 
+        from, 
+        "🔄 *Converting sticker to image...*\n\n⏳ Please wait!", 
+        sender, 
+        pushname,
+        "Sticker to Image",
+        "Converting"
+    );
 
     try {
-        const stickerBuffer = await message.quoted.download();
+        const stickerBuffer = await mek.quoted.download();
         const imageBuffer = await stickerConverter.convertStickerToImage(stickerBuffer);
 
-        // Send result
-        await client.sendMessage(from, {
+        await conn.sendMessage(from, {
             image: imageBuffer,
-            caption: "> Powered By JawadTechX 🤍",
+            caption: "🖼️ *Sticker converted to image!*",
             mimetype: 'image/png'
-        }, { quoted: message });
+        }, { quoted: mek });
+
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Sticker converted successfully!*\n\nYour sticker has been converted to an image.", 
+            sender, 
+            pushname,
+            "Sticker to Image - Success",
+            "Image delivered"
+        );
 
     } catch (error) {
         console.error('Conversion error:', error);
-        await client.sendMessage(from, {
-            text: "❌ Please try with a different sticker."
-        }, { quoted: message });
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Please try with a different sticker.*", 
+            sender, 
+            pushname,
+            "Sticker to Image - Error",
+            "Conversion failed"
+        );
     }
 });
 
 cmd({
     pattern: 'tomp3',
+    alias: ['toaudio'],
     desc: 'Convert media to audio',
     category: 'audio',
     react: '🎵',
     filename: __filename
-}, async (client, match, message, { from }) => {
-    // Input validation
-    if (!match.quoted) {
-        return await client.sendMessage(from, {
-            text: "*🔊 Please reply to a video/audio message*"
-        }, { quoted: message });
+}, async (conn, mek, m, { from, sender, pushname }) => {
+    if (!mek.quoted) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "🎵 *Please reply to a video/audio message*\n\n📌 *Usage:* Reply to a video with .tomp3", 
+            sender, 
+            pushname,
+            "Convert to Audio - Error",
+            "No media"
+        );
+        return;
     }
 
-    if (!['videoMessage', 'audioMessage'].includes(match.quoted.mtype)) {
-        return await client.sendMessage(from, {
-            text: "❌ Only video/audio messages can be converted"
-        }, { quoted: message });
+    if (!['videoMessage', 'audioMessage'].includes(mek.quoted.mtype)) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only video/audio messages can be converted*", 
+            sender, 
+            pushname,
+            "Convert to Audio - Error",
+            "Invalid type"
+        );
+        return;
     }
 
-    if (match.quoted.seconds > 300) {
-        return await client.sendMessage(from, {
-            text: "⏱️ Media too long (max 5 minutes)"
-        }, { quoted: message });
+    if (mek.quoted.seconds > 300) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⏱️ *Media too long*\n\nMaximum 5 minutes allowed.", 
+            sender, 
+            pushname,
+            "Convert to Audio - Error",
+            "Too long"
+        );
+        return;
     }
 
-    // Send processing message and store it
-    await client.sendMessage(from, {
-        text: "🔄 Converting to audio..."
-    }, { quoted: message });
+    await sendFormattedMessage(
+        conn, 
+        from, 
+        "🔄 *Converting to audio...*\n\n⏳ Please wait!", 
+        sender, 
+        pushname,
+        "Convert to Audio",
+        "Converting"
+    );
 
     try {
-        const buffer = await match.quoted.download();
-        const ext = match.quoted.mtype === 'videoMessage' ? 'mp4' : 'm4a';
+        const buffer = await mek.quoted.download();
+        const ext = mek.quoted.mtype === 'videoMessage' ? 'mp4' : 'm4a';
         const audio = await converter.toAudio(buffer, ext);
 
-        // Send result
-        await client.sendMessage(from, {
+        await conn.sendMessage(from, {
             audio: audio,
             mimetype: 'audio/mpeg'
-        }, { quoted: message });
+        }, { quoted: mek });
+
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Audio converted successfully!*\n\nYour media has been converted to MP3.", 
+            sender, 
+            pushname,
+            "Convert to Audio - Success",
+            "Audio delivered"
+        );
 
     } catch (e) {
         console.error('Conversion error:', e.message);
-        await client.sendMessage(from, {
-            text: "❌ Failed to process audio"
-        }, { quoted: message });
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Failed to process audio*\n\nPlease try again later.", 
+            sender, 
+            pushname,
+            "Convert to Audio - Error",
+            "Conversion failed"
+        );
     }
 });
 
 cmd({
     pattern: 'toptt',
+    alias: ['tovoice'],
     desc: 'Convert media to voice message',
     category: 'audio',
     react: '🎙️',
     filename: __filename
-}, async (client, match, message, { from }) => {
-    // Input validation
-    if (!match.quoted) {
-        return await client.sendMessage(from, {
-            text: "*🗣️ Please reply to a video/audio message*"
-        }, { quoted: message });
+}, async (conn, mek, m, { from, sender, pushname }) => {
+    if (!mek.quoted) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "🎙️ *Please reply to a video/audio message*\n\n📌 *Usage:* Reply to a video with .toptt", 
+            sender, 
+            pushname,
+            "Convert to Voice - Error",
+            "No media"
+        );
+        return;
     }
 
-    if (!['videoMessage', 'audioMessage'].includes(match.quoted.mtype)) {
-        return await client.sendMessage(from, {
-            text: "❌ Only video/audio messages can be converted"
-        }, { quoted: message });
+    if (!['videoMessage', 'audioMessage'].includes(mek.quoted.mtype)) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only video/audio messages can be converted*", 
+            sender, 
+            pushname,
+            "Convert to Voice - Error",
+            "Invalid type"
+        );
+        return;
     }
 
-    if (match.quoted.seconds > 60) {
-        return await client.sendMessage(from, {
-            text: "⏱️ Media too long for voice (max 1 minute)"
-        }, { quoted: message });
+    if (mek.quoted.seconds > 60) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⏱️ *Media too long for voice*\n\nMaximum 1 minute allowed.", 
+            sender, 
+            pushname,
+            "Convert to Voice - Error",
+            "Too long"
+        );
+        return;
     }
 
-    // Send processing message
-    await client.sendMessage(from, {
-        text: "🔄 Converting to voice message..."
-    }, { quoted: message });
+    await sendFormattedMessage(
+        conn, 
+        from, 
+        "🔄 *Converting to voice message...*\n\n⏳ Please wait!", 
+        sender, 
+        pushname,
+        "Convert to Voice",
+        "Converting"
+    );
 
     try {
-        const buffer = await match.quoted.download();
-        const ext = match.quoted.mtype === 'videoMessage' ? 'mp4' : 'm4a';
+        const buffer = await mek.quoted.download();
+        const ext = mek.quoted.mtype === 'videoMessage' ? 'mp4' : 'm4a';
         const ptt = await converter.toPTT(buffer, ext);
 
-        // Send result
-        await client.sendMessage(from, {
+        await conn.sendMessage(from, {
             audio: ptt,
             mimetype: 'audio/ogg; codecs=opus',
             ptt: true
-        }, { quoted: message });
+        }, { quoted: mek });
+
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Voice message created successfully!*\n\nYour media has been converted to voice.", 
+            sender, 
+            pushname,
+            "Convert to Voice - Success",
+            "Voice delivered"
+        );
 
     } catch (e) {
         console.error('PTT conversion error:', e.message);
-        await client.sendMessage(from, {
-            text: "❌ Failed to create voice message"
-        }, { quoted: message });
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Failed to create voice message*\n\nPlease try again later.", 
+            sender, 
+            pushname,
+            "Convert to Voice - Error",
+            "Conversion failed"
+        );
     }
 });
-
