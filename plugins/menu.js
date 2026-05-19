@@ -86,11 +86,12 @@ cmd({
             }
         });
 
+
         await conn.sendMessage(from, {
-            audio: { url: 'https://github.com/NjabuloJf/njabulo-data/raw/refs/heads/main/autovoice/menunew.m4a' },
-            mimetype: 'audio/mp4',
-            ptt: true
-        }, { quoted: mek });
+    audio: { url: 'https://github.com/NjabuloJf/njabulo-data/raw/main/audio/menu.mp3' },
+    mimetype: 'audio/mpeg',
+    ptt: true
+}, { quoted: mek });
         
 
         const messageID = sentMsg.key.id;
