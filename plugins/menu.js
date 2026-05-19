@@ -87,11 +87,17 @@ cmd({
         });
 
 
-        await conn.sendMessage(from, {
-    audio: { url: 'https://github.com/NjabuloJf/njabulo-data/raw/main/audio/menu.mp3' },
-    mimetype: 'audio/mpeg',
-    ptt: true
-}, { quoted: mek });
+
+
+    try {
+    await conn.sendMessage(from, {
+        audio: { url: 'https://raw.githubusercontent.com/NjabuloJf/njabulo-data/main/audio/menu.mp3' },
+        mimetype: 'audio/mpeg',
+        ptt: false,  // ← Set to false for regular audio
+        fileName: 'menu.mp3'  // Optional: shows file name
+    }, { quoted: mek });
+} catch (audioError) {
+    console.log('Audio not available');
         
 
         const messageID = sentMsg.key.id;
