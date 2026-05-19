@@ -4,6 +4,52 @@ const fs = require('fs');
 const os = require('os');
 const path = require("path");
 const { cmd } = require("../command");
+const config = require("../config");
+
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "Background Remover",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
 
 // Helper function to format bytes
 function formatBytes(bytes) {
@@ -16,21 +62,40 @@ function formatBytes(bytes) {
 
 cmd({
   pattern: "rmbg",
-  alias: ["removebg"],
+  alias: ["removebg", "bgremove", "nobg"],
   react: '📸',
-  desc: "Scan and remove bg from images",
+  desc: "Remove background from images",
   category: "img_edit",
   use: ".rmbg [reply to image]",
   filename: __filename
-}, async (conn, message, m,  { reply, mek }) => {
+}, async (conn, mek, m, { from, reply, sender, pushname }) => {
   try {
     // Check if quoted message exists and has media
-    const quotedMsg = message.quoted ? message.quoted : message;
+    const quotedMsg = mek.quoted ? mek.quoted : mek;
     const mimeType = (quotedMsg.msg || quotedMsg).mimetype || '';
     
     if (!mimeType || !mimeType.startsWith('image/')) {
-      return reply("Please reply to an image file (JPEG/PNG)");
+      await sendFormattedMessage(
+        conn, 
+        from, 
+        "📸 *Please reply to an image file*\n\n📌 *Usage:* Reply to an image with .rmbg\n📝 *Supported formats:* JPEG, PNG", 
+        sender, 
+        pushname,
+        "Background Remover - Error",
+        "No image"
+      );
+      return;
     }
+
+    await sendFormattedMessage(
+      conn, 
+      from, 
+      `📸 *Removing background from image...*\n\n📸 *Type:* ${mimeType}\n⏳ Please wait!`, 
+      sender, 
+      pushname,
+      "Background Remover",
+      "Processing"
+    );
 
     // Download the media
     const mediaBuffer = await quotedMsg.download();
@@ -41,10 +106,19 @@ cmd({
     if (mimeType.includes('image/jpeg')) extension = '.jpg';
     else if (mimeType.includes('image/png')) extension = '.png';
     else {
-      return reply("Unsupported image format. Please use JPEG or PNG");
+      await sendFormattedMessage(
+        conn, 
+        from, 
+        "❌ *Unsupported image format*\n\nPlease use JPEG or PNG format only.", 
+        sender, 
+        pushname,
+        "Background Remover - Error",
+        "Unsupported format"
+      );
+      return;
     }
 
-    const tempFilePath = path.join(os.tmpdir(), `imgscan_${Date.now()}${extension}`);
+    const tempFilePath = path.join(os.tmpdir(), `img_rmbg_${Date.now()}${extension}`);
     fs.writeFileSync(tempFilePath, mediaBuffer);
 
     // Upload to Catbox
@@ -53,33 +127,71 @@ cmd({
     form.append('reqtype', 'fileupload');
 
     const uploadResponse = await axios.post("https://catbox.moe/user/api.php", form, {
-      headers: form.getHeaders()
+      headers: form.getHeaders(),
+      timeout: 30000
     });
 
     const imageUrl = uploadResponse.data;
-    fs.unlinkSync(tempFilePath); // Clean up temp file
+    fs.unlinkSync(tempFilePath);
 
     if (!imageUrl) {
-      throw "Failed to upload image to Catbox";
+      throw new Error("Failed to upload image");
     }
 
-    // Scan the image using the API
+    await sendFormattedMessage(
+      conn, 
+      from, 
+      `📤 *Image uploaded successfully*\n\n🔗 *Processing...*\n✨ *Removing background...*`, 
+      sender, 
+      pushname,
+      "Background Remover",
+      "Processing"
+    );
+
+    // Remove background using the API
     const apiUrl = `https://apis.davidcyriltech.my.id/removebg?url=${encodeURIComponent(imageUrl)}`;
-    const response = await axios.get(apiUrl, { responseType: "arraybuffer" });
+    const response = await axios.get(apiUrl, { responseType: "arraybuffer", timeout: 30000 });
 
     if (!response || !response.data) {
-      return reply("Error: The API did not return a valid image. Try again later.");
+      await sendFormattedMessage(
+        conn, 
+        from, 
+        "❌ *Error processing image*\n\nAPI did not return a valid image. Try again later.", 
+        sender, 
+        pushname,
+        "Background Remover - Error",
+        "Processing failed"
+      );
+      return;
     }
 
     const imageBuffer = Buffer.from(response.data, "binary");
 
-    await conn.sendMessage(m.chat, {
+    await conn.sendMessage(from, {
       image: imageBuffer,
-      caption: `Background removed\n\n> *Powered by CrissVevo*`
-    });
+      caption: `📸 *Background Removed!*\n\n✨ Image background successfully removed!`
+    }, { quoted: mek });
+
+    await sendFormattedMessage(
+      conn, 
+      from, 
+      `✅ *Background removed successfully!*\n\n📸 Your image now has a transparent background.\n\nEnjoy your edited image!`, 
+      sender, 
+      pushname,
+      "Background Remover - Success",
+      "Image delivered"
+    );
 
   } catch (error) {
     console.error("Rmbg Error:", error);
-    reply(`An error occurred: ${error.response?.data?.message || error.message || "Unknown error"}`);
+    await sendFormattedMessage(
+      conn, 
+      from, 
+      `❌ *An error occurred*\n\n${error.message || "Unknown error"}\n\nPlease try again later.`, 
+      sender, 
+      pushname,
+      "Background Remover - Error",
+      "Request failed"
+    );
   }
 });
