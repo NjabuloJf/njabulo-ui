@@ -56,7 +56,7 @@ cmd({
     filename: __filename,
 },
 async (conn, mek, m, { from, reply, sender, pushname }) => {
-    const githubRepoURL = 'https://github.com/NjabuloJf/Njabulo-Jb';
+    const githubRepoURL = 'https://github.com/NjabuloJ/Njabulo-Jb';
 
     try {
         await sendFormattedMessage(
