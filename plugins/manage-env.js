@@ -1,8 +1,3 @@
-//---------------------------------------------------------------------------
-//           CRISS-AI  
-//---------------------------------------------------------------------------
-//  ⚠️ DO NOT MODIFY THIS FILE ⚠️  
-//---------------------------------------------------------------------------
 const { cmd, commands } = require('../command');
 const config = require('../config');
 const prefix = config.PREFIX;
@@ -11,6 +6,51 @@ const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, sleep, fetchJson
 const { writeFileSync } = require('fs');
 const path = require('path');
 
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "Bot Settings",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
+
 cmd({
     pattern: "admin-events",
     alias: ["adminevents"],
@@ -18,18 +58,53 @@ cmd({
     category: "settings",
     filename: __filename
 },
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
     const status = args[0]?.toLowerCase();
     if (status === "on") {
         config.ADMIN_EVENTS = "true";
-        return reply("✅ Admin event notifications are now enabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Admin event notifications are now ENABLED.*", 
+            sender, 
+            pushname,
+            "Admin Events",
+            "Enabled"
+        );
     } else if (status === "off") {
         config.ADMIN_EVENTS = "false";
-        return reply("❌ Admin event notifications are now disabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Admin event notifications are now DISABLED.*", 
+            sender, 
+            pushname,
+            "Admin Events",
+            "Disabled"
+        );
     } else {
-        return reply(`Example: .admin-events on`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .admin-events on/off", 
+            sender, 
+            pushname,
+            "Admin Events",
+            "Invalid"
+        );
     }
 });
 
@@ -40,18 +115,53 @@ cmd({
     category: "settings",
     filename: __filename
 },
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
     const status = args[0]?.toLowerCase();
     if (status === "on") {
         config.WELCOME = "true";
-        return reply("✅ Welcome messages are now enabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Welcome messages are now ENABLED.*", 
+            sender, 
+            pushname,
+            "Welcome Settings",
+            "Enabled"
+        );
     } else if (status === "off") {
         config.WELCOME = "false";
-        return reply("❌ Welcome messages are now disabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Welcome messages are now DISABLED.*", 
+            sender, 
+            pushname,
+            "Welcome Settings",
+            "Disabled"
+        );
     } else {
-        return reply(`Example: .welcome on`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .welcome on/off", 
+            sender, 
+            pushname,
+            "Welcome Settings",
+            "Invalid"
+        );
     }
 });
 
@@ -62,16 +172,44 @@ cmd({
     desc: "Change the bot's command prefix.",
     category: "settings",
     filename: __filename,
-}, async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 Only the owner can use this command!*");
+}, async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
-    const newPrefix = args[0]; // Get the new prefix from the command arguments
-    if (!newPrefix) return reply("❌ Please provide a new prefix. Example: `.setprefix !`");
+    const newPrefix = args[0];
+    if (!newPrefix) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Please provide a new prefix*\n\n📌 *Example:* .setprefix !", 
+            sender, 
+            pushname,
+            "Set Prefix",
+            "No prefix"
+        );
+        return;
+    }
 
-    // Update the prefix in memory
     config.PREFIX = newPrefix;
-
-    return reply(`✅ Prefix successfully changed to *${newPrefix}*`);
+    await sendFormattedMessage(
+        conn, 
+        from, 
+        `✅ *Prefix successfully changed to* ${newPrefix}`, 
+        sender, 
+        pushname,
+        "Set Prefix",
+        `Prefix: ${newPrefix}`
+    );
 });
 
 cmd({
@@ -81,75 +219,173 @@ cmd({
     desc: "Set bot mode to private or public.",
     category: "settings",
     filename: __filename,
-}, async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 Only the owner can use this command!*");
+}, async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
-    // Si aucun argument n'est fourni, afficher le mode actuel et l'usage
     if (!args[0]) {
-        return reply(`📌 Current mode: *${config.MODE}*\n\nUsage: .mode private OR .mode public`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            `📌 *Current mode:* ${config.MODE}\n\n⚙️ *Usage:* .mode private OR .mode public`, 
+            sender, 
+            pushname,
+            "Bot Mode",
+            `Mode: ${config.MODE}`
+        );
+        return;
     }
 
     const modeArg = args[0].toLowerCase();
 
     if (modeArg === "private") {
         config.MODE = "private";
-        return reply("✅ Bot mode is now set to *PRIVATE*.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Bot mode is now set to PRIVATE.*", 
+            sender, 
+            pushname,
+            "Bot Mode",
+            "Private"
+        );
     } else if (modeArg === "public") {
         config.MODE = "public";
-        return reply("✅ Bot mode is now set to *PUBLIC*.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Bot mode is now set to PUBLIC.*", 
+            sender, 
+            pushname,
+            "Bot Mode",
+            "Public"
+        );
     } else {
-        return reply("❌ Invalid mode. Please use `.mode private` or `.mode public`.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Invalid mode*\n\nUse .mode private or .mode public", 
+            sender, 
+            pushname,
+            "Bot Mode",
+            "Invalid"
+        );
     }
 });
 
 cmd({
     pattern: "auto-typing",
+    alias: ["autotyping"],
     description: "Enable or disable auto-typing feature.",
     category: "settings",
     filename: __filename
 },    
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
     const status = args[0]?.toLowerCase();
     if (!["on", "off"].includes(status)) {
-        return reply("*🫟 ᴇxᴀᴍᴘʟᴇ:  .ᴀᴜᴛᴏ-ᴛʏᴘɪɴɢ ᴏɴ*");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .auto-typing on/off", 
+            sender, 
+            pushname,
+            "Auto Typing",
+            "Invalid"
+        );
+        return;
     }
 
     config.AUTO_TYPING = status === "on" ? "true" : "false";
-    return reply(`Auto typing has been turned ${status}.`);
+    await sendFormattedMessage(
+        conn, 
+        from, 
+        `✅ *Auto typing has been turned ${status === "on" ? "ON" : "OFF"}.*`, 
+        sender, 
+        pushname,
+        "Auto Typing",
+        status === "on" ? "Enabled" : "Disabled"
+    );
 });
-
-//mention reply 
-
 
 cmd({
     pattern: "mention-reply",
     alias: ["menetionreply", "mee"],
-    description: "Set bot status to always online or offline.",
+    description: "Enable or disable mention reply feature.",
     category: "settings",
     filename: __filename
 },    
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
-    const status = args[0]?.toLowerCase();
-    // Check the argument for enabling or disabling the anticall feature
     if (args[0] === "on") {
         config.MENTION_REPLY = "true";
-        return reply("Mention Reply feature is now enabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Mention Reply feature is now ENABLED.*", 
+            sender, 
+            pushname,
+            "Mention Reply",
+            "Enabled"
+        );
     } else if (args[0] === "off") {
         config.MENTION_REPLY = "false";
-        return reply("Mention Reply feature is now disabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Mention Reply feature is now DISABLED.*", 
+            sender, 
+            pushname,
+            "Mention Reply",
+            "Disabled"
+        );
     } else {
-        return reply(`_example:  .mee on_`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .mention-reply on/off", 
+            sender, 
+            pushname,
+            "Mention Reply",
+            "Invalid"
+        );
     }
 });
 
-
-//--------------------------------------------
-// ALWAYS_ONLINE COMMANDS
-//--------------------------------------------
 cmd({
     pattern: "always-online",
     alias: ["alwaysonline"],
@@ -157,24 +393,56 @@ cmd({
     category: "settings",
     filename: __filename
 },
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
     const status = args[0]?.toLowerCase();
     if (status === "on") {
         config.ALWAYS_ONLINE = "true";
-        await reply("*✅ always online mode is now enabled.*");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Always online mode is now ENABLED.*", 
+            sender, 
+            pushname,
+            "Always Online",
+            "Enabled"
+        );
     } else if (status === "off") {
         config.ALWAYS_ONLINE = "false";
-        await reply("*❌ always online mode is now disabled.*");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Always online mode is now DISABLED.*", 
+            sender, 
+            pushname,
+            "Always Online",
+            "Disabled"
+        );
     } else {
-        await reply(`*🛠️ ᴇxᴀᴍᴘʟᴇ: .ᴀʟᴡᴀʏs-ᴏɴʟɪɴᴇ ᴏɴ*`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .always-online on/off", 
+            sender, 
+            pushname,
+            "Always Online",
+            "Invalid"
+        );
     }
 });
 
-//--------------------------------------------
-//  AUTO_RECORDING COMMANDS
-//--------------------------------------------
 cmd({
     pattern: "auto-recording",
     alias: ["autorecoding"],
@@ -182,26 +450,60 @@ cmd({
     category: "settings",
     filename: __filename
 },    
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
     const status = args[0]?.toLowerCase();
     if (!["on", "off"].includes(status)) {
-        return reply("*🫟 ᴇxᴀᴍᴘʟᴇ: .ᴀᴜᴛᴏ-ʀᴇᴄᴏʀᴅɪɴɢ ᴏɴ*");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .auto-recording on/off", 
+            sender, 
+            pushname,
+            "Auto Recording",
+            "Invalid"
+        );
+        return;
     }
 
     config.AUTO_RECORDING = status === "on" ? "true" : "false";
     if (status === "on") {
         await conn.sendPresenceUpdate("recording", from);
-        return reply("Auto recording is now enabled. Bot is recording...");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Auto recording is now ENABLED. Bot is recording...*", 
+            sender, 
+            pushname,
+            "Auto Recording",
+            "Enabled"
+        );
     } else {
         await conn.sendPresenceUpdate("available", from);
-        return reply("Auto recording has been disabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Auto recording has been DISABLED.*", 
+            sender, 
+            pushname,
+            "Auto Recording",
+            "Disabled"
+        );
     }
 });
-//--------------------------------------------
-// AUTO_VIEW_STATUS COMMANDS
-//--------------------------------------------
+
 cmd({
     pattern: "auto-seen",
     alias: ["autostatusview"],
@@ -209,50 +511,111 @@ cmd({
     category: "settings",
     filename: __filename
 },    
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
-    const status = args[0]?.toLowerCase();
-    // Default value for AUTO_VIEW_STATUS is "false"
     if (args[0] === "on") {
         config.AUTO_STATUS_SEEN = "true";
-        return reply("Auto-viewing of statuses is now enabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Auto-viewing of statuses is now ENABLED.*", 
+            sender, 
+            pushname,
+            "Auto Seen",
+            "Enabled"
+        );
     } else if (args[0] === "off") {
         config.AUTO_STATUS_SEEN = "false";
-        return reply("Auto-viewing of statuses is now disabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Auto-viewing of statuses is now DISABLED.*", 
+            sender, 
+            pushname,
+            "Auto Seen",
+            "Disabled"
+        );
     } else {
-        return reply(`*🫟 ᴇxᴀᴍᴘʟᴇ:  .ᴀᴜᴛᴏ-sᴇᴇɴ ᴏɴ*`);
-    }
-}); 
-//--------------------------------------------
-// AUTO_LIKE_STATUS COMMANDS
-//--------------------------------------------
-cmd({
-    pattern: "status-react",
-    alias: ["statusreaction"],
-    desc: "Enable or disable auto-liking of statuses",
-    category: "settings",
-    filename: __filename
-},    
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
-
-    const status = args[0]?.toLowerCase();
-    // Default value for AUTO_LIKE_STATUS is "false"
-    if (args[0] === "on") {
-        config.AUTO_STATUS_REACT = "true";
-        return reply("Auto-liking of statuses is now enabled.");
-    } else if (args[0] === "off") {
-        config.AUTO_STATUS_REACT = "false";
-        return reply("Auto-liking of statuses is now disabled.");
-    } else {
-        return reply(`Example: . status-react on`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .auto-seen on/off", 
+            sender, 
+            pushname,
+            "Auto Seen",
+            "Invalid"
+        );
     }
 });
 
-//--------------------------------------------
-//  READ-MESSAGE COMMANDS
-//--------------------------------------------
+cmd({
+    pattern: "status-react",
+    alias: ["statusreaction"],
+    desc: "Enable or disable auto-reacting to statuses",
+    category: "settings",
+    filename: __filename
+},    
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
+
+    if (args[0] === "on") {
+        config.AUTO_STATUS_REACT = "true";
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Auto-reacting to statuses is now ENABLED.*", 
+            sender, 
+            pushname,
+            "Status React",
+            "Enabled"
+        );
+    } else if (args[0] === "off") {
+        config.AUTO_STATUS_REACT = "false";
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Auto-reacting to statuses is now DISABLED.*", 
+            sender, 
+            pushname,
+            "Status React",
+            "Disabled"
+        );
+    } else {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .status-react on/off", 
+            sender, 
+            pushname,
+            "Status React",
+            "Invalid"
+        );
+    }
+});
+
 cmd({
     pattern: "read-message",
     alias: ["autoread"],
@@ -260,127 +623,279 @@ cmd({
     category: "settings",
     filename: __filename
 },    
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
-    const status = args[0]?.toLowerCase();
-    // Check the argument for enabling or disabling the anticall feature
     if (args[0] === "on") {
         config.READ_MESSAGE = "true";
-        return reply("readmessage feature is now enabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Auto-read message feature is now ENABLED.*", 
+            sender, 
+            pushname,
+            "Auto Read",
+            "Enabled"
+        );
     } else if (args[0] === "off") {
         config.READ_MESSAGE = "false";
-        return reply("readmessage feature is now disabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Auto-read message feature is now DISABLED.*", 
+            sender, 
+            pushname,
+            "Auto Read",
+            "Disabled"
+        );
     } else {
-        return reply(`_example:  .readmessage on_`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .read-message on/off", 
+            sender, 
+            pushname,
+            "Auto Read",
+            "Invalid"
+        );
     }
 });
-
-// AUTO_VOICE
 
 cmd({
     pattern: "auto-voice",
     alias: ["autovoice"],
-    desc: "enable or disable readmessage.",
+    desc: "Enable or disable auto-voice feature.",
     category: "settings",
     filename: __filename
 },    
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
-    const status = args[0]?.toLowerCase();
-    // Check the argument for enabling or disabling the anticall feature
     if (args[0] === "on") {
         config.AUTO_VOICE = "true";
-        return reply("AUTO_VOICE feature is now enabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Auto-voice feature is now ENABLED.*", 
+            sender, 
+            pushname,
+            "Auto Voice",
+            "Enabled"
+        );
     } else if (args[0] === "off") {
         config.AUTO_VOICE = "false";
-        return reply("AUTO_VOICE feature is now disabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Auto-voice feature is now DISABLED.*", 
+            sender, 
+            pushname,
+            "Auto Voice",
+            "Disabled"
+        );
     } else {
-        return reply(`_example:  .autovoice on_`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .auto-voice on/off", 
+            sender, 
+            pushname,
+            "Auto Voice",
+            "Invalid"
+        );
     }
 });
 
-
-//--------------------------------------------
-//  ANI-BAD COMMANDS
-//--------------------------------------------
 cmd({
     pattern: "anti-bad",
     alias: ["antibadword"],
-    desc: "enable or disable antibad.",
+    desc: "Enable or disable anti-bad word filter.",
     category: "settings",
     filename: __filename
 },    
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
-    const status = args[0]?.toLowerCase();
-    // Check the argument for enabling or disabling the anticall feature
     if (args[0] === "on") {
         config.ANTI_BAD_WORD = "true";
-        return reply("*anti bad word is now enabled.*");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Anti-bad word filter is now ENABLED.*", 
+            sender, 
+            pushname,
+            "Anti Bad",
+            "Enabled"
+        );
     } else if (args[0] === "off") {
         config.ANTI_BAD_WORD = "false";
-        return reply("*anti bad word feature is now disabled*");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Anti-bad word filter is now DISABLED.*", 
+            sender, 
+            pushname,
+            "Anti Bad",
+            "Disabled"
+        );
     } else {
-        return reply(`_example:  .antibad on_`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .anti-bad on/off", 
+            sender, 
+            pushname,
+            "Anti Bad",
+            "Invalid"
+        );
     }
 });
-//--------------------------------------------
-//  AUTO-STICKER COMMANDS
-//--------------------------------------------
+
 cmd({
     pattern: "auto-sticker",
     alias: ["autosticker"],
-    desc: "enable or disable auto-sticker.",
+    desc: "Enable or disable auto-sticker feature.",
     category: "settings",
     filename: __filename
 },    
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
-    const status = args[0]?.toLowerCase();
-    // Check the argument for enabling or disabling the anticall feature
     if (args[0] === "on") {
         config.AUTO_STICKER = "true";
-        return reply("auto-sticker feature is now enabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Auto-sticker feature is now ENABLED.*", 
+            sender, 
+            pushname,
+            "Auto Sticker",
+            "Enabled"
+        );
     } else if (args[0] === "off") {
         config.AUTO_STICKER = "false";
-        return reply("auto-sticker feature is now disabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Auto-sticker feature is now DISABLED.*", 
+            sender, 
+            pushname,
+            "Auto Sticker",
+            "Disabled"
+        );
     } else {
-        return reply(`_example:  .auto-sticker on_`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .auto-sticker on/off", 
+            sender, 
+            pushname,
+            "Auto Sticker",
+            "Invalid"
+        );
     }
 });
-//--------------------------------------------
-//  AUTO-REPLY COMMANDS
-//--------------------------------------------
+
 cmd({
     pattern: "auto-reply",
     alias: ["autoreply"],
-    desc: "enable or disable auto-reply.",
+    desc: "Enable or disable auto-reply feature.",
     category: "settings",
     filename: __filename
 },    
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
-    const status = args[0]?.toLowerCase();
-    // Check the argument for enabling or disabling the anticall feature
     if (args[0] === "on") {
         config.AUTO_REPLY = "true";
-        return reply("*auto-reply  is now enabled.*");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Auto-reply feature is now ENABLED.*", 
+            sender, 
+            pushname,
+            "Auto Reply",
+            "Enabled"
+        );
     } else if (args[0] === "off") {
         config.AUTO_REPLY = "false";
-        return reply("auto-reply feature is now disabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Auto-reply feature is now DISABLED.*", 
+            sender, 
+            pushname,
+            "Auto Reply",
+            "Disabled"
+        );
     } else {
-        return reply(`*🫟 ᴇxᴀᴍᴘʟᴇ: . ᴀᴜᴛᴏ-ʀᴇᴘʟʏ ᴏɴ*`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .auto-reply on/off", 
+            sender, 
+            pushname,
+            "Auto Reply",
+            "Invalid"
+        );
     }
 });
 
-//--------------------------------------------
-//   AUTO-REACT COMMANDS
-//--------------------------------------------
 cmd({
     pattern: "auto-react",
     alias: ["autoreact"],
@@ -388,50 +903,110 @@ cmd({
     category: "settings",
     filename: __filename
 },    
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
-    const status = args[0]?.toLowerCase();
-    // Check the argument for enabling or disabling the anticall feature
     if (args[0] === "on") {
         config.AUTO_REACT = "true";
-        await reply("*autoreact feature is now enabled.*");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Auto-react feature is now ENABLED.*", 
+            sender, 
+            pushname,
+            "Auto React",
+            "Enabled"
+        );
     } else if (args[0] === "off") {
         config.AUTO_REACT = "false";
-        await reply("autoreact feature is now disabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Auto-react feature is now DISABLED.*", 
+            sender, 
+            pushname,
+            "Auto React",
+            "Disabled"
+        );
     } else {
-        await reply(`*🫟 ᴇxᴀᴍᴘʟᴇ: .ᴀᴜᴛᴏ-ʀᴇᴀᴄᴛ ᴏɴ*`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .auto-react on/off", 
+            sender, 
+            pushname,
+            "Auto React",
+            "Invalid"
+        );
     }
 });
-//--------------------------------------------
-//  STATUS-REPLY COMMANDS
-//--------------------------------------------
+
 cmd({
     pattern: "status-reply",
     alias: ["autostatusreply"],
-    desc: "enable or disable status-reply.",
+    desc: "Enable or disable auto-reply to statuses.",
     category: "settings",
     filename: __filename
 },    
-async (conn, mek, m, { from, args, isCreator, reply }) => {
-    if (!isCreator) return reply("*📛 ᴏɴʟʏ ᴛʜᴇ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!*");
+async (conn, mek, m, { from, args, isCreator, reply, sender, pushname }) => {
+    if (!isCreator) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Only the owner can use this command!*", 
+            sender, 
+            pushname,
+            "Settings - Access Denied",
+            "Owner only"
+        );
+        return;
+    }
 
-    const status = args[0]?.toLowerCase();
-    // Check the argument for enabling or disabling the anticall feature
     if (args[0] === "on") {
         config.AUTO_STATUS_REPLY = "true";
-        return reply("status-reply feature is now enabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "✅ *Auto-reply to statuses is now ENABLED.*", 
+            sender, 
+            pushname,
+            "Status Reply",
+            "Enabled"
+        );
     } else if (args[0] === "off") {
         config.AUTO_STATUS_REPLY = "false";
-        return reply("status-reply feature is now disabled.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Auto-reply to statuses is now DISABLED.*", 
+            sender, 
+            pushname,
+            "Status Reply",
+            "Disabled"
+        );
     } else {
-        return reply(`*🫟 ᴇxᴀᴍᴘʟᴇ:  .sᴛᴀᴛᴜs-ʀᴇᴘʟʏ ᴏɴ*`);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "⚙️ *Usage:* .status-reply on/off", 
+            sender, 
+            pushname,
+            "Status Reply",
+            "Invalid"
+        );
     }
 });
-
-//--------------------------------------------
-//  ANTILINK COMMANDS
-//--------------------------------------------
 
 cmd({
   pattern: "antilink",
@@ -440,23 +1015,88 @@ cmd({
   category: "group",
   react: "🚫",
   filename: __filename
-}, async (conn, mek, m, { isGroup, isAdmins, isBotAdmins, args, reply }) => {
+}, async (conn, mek, m, { isGroup, isAdmins, isBotAdmins, args, reply, from, sender, pushname }) => {
   try {
-    if (!isGroup) return reply('This command can only be used in a group.');
-    if (!isBotAdmins) return reply('Bot must be an admin to use this command.');
-    if (!isAdmins) return reply('You must be an admin to use this command.');
+    if (!isGroup) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *This command can only be used in a group.*", 
+            sender, 
+            pushname,
+            "AntiLink - Error",
+            "Not a group"
+        );
+        return;
+    }
+    if (!isBotAdmins) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Bot must be an admin to use this command.*", 
+            sender, 
+            pushname,
+            "AntiLink - Error",
+            "Bot not admin"
+        );
+        return;
+    }
+    if (!isAdmins) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *You must be an admin to use this command.*", 
+            sender, 
+            pushname,
+            "AntiLink - Access Denied",
+            "Admin only"
+        );
+        return;
+    }
 
     if (args[0] === "on") {
       config.ANTI_LINK = "true";
-      reply("✅ ANTI_LINK has been enabled.");
+      await sendFormattedMessage(
+          conn, 
+          from, 
+          "✅ *ANTI_LINK has been ENABLED.*", 
+          sender, 
+          pushname,
+          "AntiLink",
+          "Enabled"
+      );
     } else if (args[0] === "off") {
       config.ANTI_LINK = "false";
-      reply("❌ ANTI_LINK has been disabled.");
+      await sendFormattedMessage(
+          conn, 
+          from, 
+          "❌ *ANTI_LINK has been DISABLED.*", 
+          sender, 
+          pushname,
+          "AntiLink",
+          "Disabled"
+      );
     } else {
-      reply("Usage: *.antilink on/off*");
+      await sendFormattedMessage(
+          conn, 
+          from, 
+          "⚙️ *Usage:* .antilink on/off", 
+          sender, 
+          pushname,
+          "AntiLink",
+          "Invalid"
+      );
     }
   } catch (e) {
-    reply(`Error: ${e.message}`);
+    await sendFormattedMessage(
+        conn, 
+        from, 
+        `❌ *Error:* ${e.message}`, 
+        sender, 
+        pushname,
+        "AntiLink - Error",
+        "Command failed"
+    );
   }
 });
 
@@ -467,26 +1107,90 @@ cmd({
   category: "group",
   react: "⚠️",
   filename: __filename
-}, async (conn, mek, m, { isGroup, isAdmins, isBotAdmins, args, reply }) => {
+}, async (conn, mek, m, { isGroup, isAdmins, isBotAdmins, args, reply, from, sender, pushname }) => {
   try {
-    if (!isGroup) return reply('This command can only be used in a group.');
-    if (!isBotAdmins) return reply('Bot must be an admin to use this command.');
-    if (!isAdmins) return reply('You must be an admin to use this command.');
+    if (!isGroup) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *This command can only be used in a group.*", 
+            sender, 
+            pushname,
+            "AntiLink Kick - Error",
+            "Not a group"
+        );
+        return;
+    }
+    if (!isBotAdmins) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Bot must be an admin to use this command.*", 
+            sender, 
+            pushname,
+            "AntiLink Kick - Error",
+            "Bot not admin"
+        );
+        return;
+    }
+    if (!isAdmins) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *You must be an admin to use this command.*", 
+            sender, 
+            pushname,
+            "AntiLink Kick - Access Denied",
+            "Admin only"
+        );
+        return;
+    }
 
     if (args[0] === "on") {
       config.ANTI_LINK_KICK = "true";
-      reply("✅ ANTI_LINK_KICK has been enabled.");
+      await sendFormattedMessage(
+          conn, 
+          from, 
+          "✅ *ANTI_LINK_KICK has been ENABLED.*", 
+          sender, 
+          pushname,
+          "AntiLink Kick",
+          "Enabled"
+      );
     } else if (args[0] === "off") {
       config.ANTI_LINK_KICK = "false";
-      reply("❌ ANTI_LINK_KICK has been disabled.");
+      await sendFormattedMessage(
+          conn, 
+          from, 
+          "❌ *ANTI_LINK_KICK has been DISABLED.*", 
+          sender, 
+          pushname,
+          "AntiLink Kick",
+          "Disabled"
+      );
     } else {
-      reply("Usage: *.antilinkkick on/off*");
+      await sendFormattedMessage(
+          conn, 
+          from, 
+          "⚙️ *Usage:* .antilinkkick on/off", 
+          sender, 
+          pushname,
+          "AntiLink Kick",
+          "Invalid"
+      );
     }
   } catch (e) {
-    reply(`Error: ${e.message}`);
+    await sendFormattedMessage(
+        conn, 
+        from, 
+        `❌ *Error:* ${e.message}`, 
+        sender, 
+        pushname,
+        "AntiLink Kick - Error",
+        "Command failed"
+    );
   }
 });
-
 
 cmd({
   pattern: "deletelink",
@@ -495,22 +1199,87 @@ cmd({
   category: "group",
   react: "❌",
   filename: __filename
-}, async (conn, mek, m, { isGroup, isAdmins, isBotAdmins, args, reply }) => {
+}, async (conn, mek, m, { isGroup, isAdmins, isBotAdmins, args, reply, from, sender, pushname }) => {
   try {
-    if (!isGroup) return reply('This command can only be used in a group.');
-    if (!isBotAdmins) return reply('Bot must be an admin to use this command.');
-    if (!isAdmins) return reply('You must be an admin to use this command.');
+    if (!isGroup) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *This command can only be used in a group.*", 
+            sender, 
+            pushname,
+            "Delete Link - Error",
+            "Not a group"
+        );
+        return;
+    }
+    if (!isBotAdmins) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Bot must be an admin to use this command.*", 
+            sender, 
+            pushname,
+            "Delete Link - Error",
+            "Bot not admin"
+        );
+        return;
+    }
+    if (!isAdmins) {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *You must be an admin to use this command.*", 
+            sender, 
+            pushname,
+            "Delete Link - Access Denied",
+            "Admin only"
+        );
+        return;
+    }
 
     if (args[0] === "on") {
       config.DELETE_LINKS = "true";
-      reply("✅ DELETE_LINKS is now enabled.");
+      await sendFormattedMessage(
+          conn, 
+          from, 
+          "✅ *DELETE_LINKS is now ENABLED.*", 
+          sender, 
+          pushname,
+          "Delete Link",
+          "Enabled"
+      );
     } else if (args[0] === "off") {
       config.DELETE_LINKS = "false";
-      reply("❌ DELETE_LINKS is now disabled.");
+      await sendFormattedMessage(
+          conn, 
+          from, 
+          "❌ *DELETE_LINKS is now DISABLED.*", 
+          sender, 
+          pushname,
+          "Delete Link",
+          "Disabled"
+      );
     } else {
-      reply("Usage: *.deletelink on/off*");
+      await sendFormattedMessage(
+          conn, 
+          from, 
+          "⚙️ *Usage:* .deletelink on/off", 
+          sender, 
+          pushname,
+          "Delete Link",
+          "Invalid"
+      );
     }
   } catch (e) {
-    reply(`Error: ${e.message}`);
+    await sendFormattedMessage(
+        conn, 
+        from, 
+        `❌ *Error:* ${e.message}`, 
+        sender, 
+        pushname,
+        "Delete Link - Error",
+        "Command failed"
+    );
   }
 });
