@@ -3,9 +3,54 @@ const config = require('../config');
 const { cmd, commands } = require('../command');
 const fetch = require('node-fetch'); 
 
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "Prayer Times",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
+
 cmd({
     pattern: "praytime", 
-    alias: ["prayertimes", "prayertime", "ptime" ], 
+    alias: ["prayertimes", "prayertime", "ptime", "salah"], 
     react: "✅", 
     desc: "Get the prayer times, weather, and location for the city.", 
     category: "information", 
@@ -13,63 +58,88 @@ cmd({
 },
 async(conn, mek, m, {from, l, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, isItzcp, groupAdmins, isBotAdmins, isAdmins, reply}) => {
     try {
-        const city = args.length > 0 ? args.join(" ") : "bhakkar"; // Default to Bhakkar if no city is provided
-        const apiUrl = `https://api.nexoracle.com/islamic/prayer-times?city=${city}`;
+        const city = args.length > 0 ? args.join(" ") : "bhakkar";
 
-        const response = await fetch(apiUrl);
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            `🕌 *Fetching prayer times...*\n\n📍 *City:* ${city}\n⏳ Please wait!`, 
+            sender, 
+            pushname,
+            "Prayer Times",
+            "Fetching data"
+        );
+
+        const apiUrl = `https://api.nexoracle.com/islamic/prayer-times?city=${encodeURIComponent(city)}`;
+        const response = await fetch(apiUrl, { timeout: 15000 });
 
         if (!response.ok) {
-            return reply('Error fetching prayer times!');
+            await sendFormattedMessage(
+                conn, 
+                from, 
+                "❌ *Error fetching prayer times*\n\nPlease try again later.", 
+                sender, 
+                pushname,
+                "Prayer Times - Error",
+                "API request failed"
+            );
+            return;
         }
 
         const data = await response.json();
 
         if (data.status !== 200) {
-            return reply('Failed to get prayer times. Please try again later.');
+            await sendFormattedMessage(
+                conn, 
+                from, 
+                "❌ *Failed to get prayer times*\n\nPlease check the city name and try again.\n\n📌 *Example:* .praytime london", 
+                sender, 
+                pushname,
+                "Prayer Times - Error",
+                "City not found"
+            );
+            return;
         }
 
         const prayerTimes = data.result.items[0];
-        const weather = data.result.today_weather; // Weather data
-        const location = data.result.city; // Location name
+        const weather = data.result.today_weather;
+        const location = data.result.city;
 
-        // Building the message content
-        let dec = `*Prayer Times for ${location}, ${data.result.state}*\n\n`;
-        dec += `📍 *Location*: ${location}, ${data.result.state}, ${data.result.country}\n`;
-        dec += `🕌 *Method*: ${data.result.prayer_method_name}\n\n`;
+        let dec = `🕌 *PRAYER TIMES* 🕌
 
-        dec += `🌅 *Fajr*: ${prayerTimes.fajr}\n`;
-        dec += `🌄 *Shurooq*: ${prayerTimes.shurooq}\n`;
-        dec += `☀️ *Dhuhr*: ${prayerTimes.dhuhr}\n`;
-        dec += `🌇 *Asr*: ${prayerTimes.asr}\n`;
-        dec += `🌆 *Maghrib*: ${prayerTimes.maghrib}\n`;
-        dec += `🌃 *Isha*: ${prayerTimes.isha}\n\n`;
+📍 *Location:* ${location}, ${data.result.state}
+📌 *Country:* ${data.result.country}
+🕌 *Method:* ${data.result.prayer_method_name}
 
-        dec += `🧭 *Qibla Direction*: ${data.result.qibla_direction}°\n`;
+━━━━━━━━━━━━━━━━
 
-        const temperature = weather.temperature !== null ? `${weather.temperature}°C` : 'Data not available';
-        dec += `🌡️ *Temperature*: ${temperature}\n`;
+🌅 *Fajr:* ${prayerTimes.fajr}
+🌄 *Shurooq:* ${prayerTimes.shurooq}
+☀️ *Dhuhr:* ${prayerTimes.dhuhr}
+🌇 *Asr:* ${prayerTimes.asr}
+🌆 *Maghrib:* ${prayerTimes.maghrib}
+🌃 *Isha:* ${prayerTimes.isha}
 
-        // Sending the image with the caption and context info
-        await conn.sendMessage(
-            from,
-            {
-                image: { url: `https://files.catbox.moe/37xk9g.jpg` },
-                caption: dec,
-                contextInfo: {
-                    mentionedJid: [m.sender],
-                    forwardingScore: 999,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363378608564635@newsletter',
-                        newsletterName: 'CRISS AI SUPPORT',
-                        serverMessageId: 143
-                    }
-                }
-            },
-            { quoted: mek }
+━━━━━━━━━━━━━━━━
+
+🧭 *Qibla Direction:* ${data.result.qibla_direction}°
+
+🌡️ *Temperature:* ${weather.temperature !== null ? `${weather.temperature}°C` : 'Data not available'}
+
+━━━━━━━━━━━━━━━━
+✅ *Prayer times fetched successfully!*`;
+
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            dec, 
+            sender, 
+            pushname,
+            `Prayer Times - ${location}`,
+            `${city} prayer times`
         );
 
-        // Optionally, send an audio file related to the prayer time
+        // Send Islamic audio
         await conn.sendMessage(from, {
             audio: { url: 'https://github.com/XdTechPro/KHAN-DATA/raw/refs/heads/main/autovoice/Islamic.m4a' },
             mimetype: 'audio/mp4',
@@ -78,6 +148,14 @@ async(conn, mek, m, {from, l, quoted, body, isCmd, command, args, q, isGroup, se
 
     } catch (e) {
         console.log(e);
-        reply('*Error occurred while fetching prayer times and weather.*');
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            `❌ *Error occurred*\n\n${e.message}\n\nPlease try again later.`, 
+            sender, 
+            pushname,
+            "Prayer Times - Error",
+            "Request failed"
+        );
     }
 });
