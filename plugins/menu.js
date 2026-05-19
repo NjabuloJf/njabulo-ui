@@ -109,7 +109,7 @@ cmd({
                     thumbnailUrl: config.FANAIMG,
                     sourceUrl: config.NJABULOURL,
                     mediaType: 1,
-                    renderSmallThumbnail: false
+                    renderLargerThumbnail: true,
                 }
             }
         }, { 
