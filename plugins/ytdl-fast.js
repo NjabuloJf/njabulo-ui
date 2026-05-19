@@ -2,6 +2,7 @@ const axios = require("axios");
 const yts = require("yt-search");
 const config = require('../config');
 const { cmd } = require('../command');
+const ytdl = require('ytdl-core');
 
 cmd({
     pattern: "play",
@@ -75,6 +76,7 @@ async (conn, mek, m, { from, args, q, reply, sender, pushname }) => {
 
         // Get the best match (first result)
         const bestMatch = search.videos[0];
+        const videoUrl = bestMatch.url;
         
         // Format duration
         let duration = bestMatch.timestamp || 'Unknown';
@@ -139,51 +141,66 @@ ${uploaded}
         const randomReaction = reactionEmojis[Math.floor(Math.random() * reactionEmojis.length)];
         await conn.sendMessage(from, { react: { text: randomReaction, key: mek.key } });
 
-        // Try multiple APIs for audio download
+        // Try multiple download methods
         let downloadUrl = null;
-        let apiError = null;
         
-        // API 1: noobs-api
+        // Method 1: Using ytdl-core directly
         try {
-            const apiURL1 = `https://noobs-api.top/dipto/ytDl3?link=${encodeURIComponent(bestMatch.videoId)}&format=mp3`;
-            const response1 = await axios.get(apiURL1, { timeout: 20000 });
-            if (response1.status === 200 && response1.data?.downloadLink) {
-                downloadUrl = response1.data.downloadLink;
+            const info = await ytdl.getInfo(videoUrl);
+            const audioFormat = ytdl.chooseFormat(info.formats, { 
+                quality: '140',
+                filter: 'audioonly'
+            });
+            if (audioFormat && audioFormat.url) {
+                downloadUrl = audioFormat.url;
             }
         } catch (err) {
-            console.log('API 1 failed:', err.message);
-            apiError = err;
+            console.log('ytdl failed:', err.message);
         }
         
-        // API 2: Alternative API if first fails
+        // Method 2: Using alternative API
         if (!downloadUrl) {
             try {
-                const apiURL2 = `https://api.davidcyriltech.my.id/download/ytmp3?url=https://youtu.be/${bestMatch.videoId}`;
-                const response2 = await axios.get(apiURL2, { timeout: 20000 });
-                if (response2.data?.success && response2.data?.result?.download_url) {
-                    downloadUrl = response2.data.result.download_url;
+                const apiUrl = `https://p.oceansaver.in/ajax/download.php?url=${encodeURIComponent(videoUrl)}&bitrate=320`;
+                const response = await axios.get(apiUrl, { timeout: 15000 });
+                if (response.data && response.data.success) {
+                    downloadUrl = response.data.download_url;
                 }
             } catch (err) {
-                console.log('API 2 failed:', err.message);
+                console.log('Alternative API failed:', err.message);
             }
         }
         
-        // API 3: Another alternative
+        // Method 3: Using another API
         if (!downloadUrl) {
             try {
-                const apiURL3 = `https://api.siputzx.my.id/api/download/ytmp3?url=https://youtu.be/${bestMatch.videoId}`;
-                const response3 = await axios.get(apiURL3, { timeout: 20000 });
-                if (response3.data?.status && response3.data?.data?.download) {
-                    downloadUrl = response3.data.data.download;
+                const apiUrl = `https://api.agatz.xyz/api/ytaudio?url=${encodeURIComponent(videoUrl)}`;
+                const response = await axios.get(apiUrl, { timeout: 15000 });
+                if (response.data && response.data.status === 200 && response.data.data) {
+                    downloadUrl = response.data.data.link;
                 }
             } catch (err) {
-                console.log('API 3 failed:', err.message);
+                console.log('Agatz API failed:', err.message);
             }
         }
         
         if (!downloadUrl) {
             await conn.sendMessage(from, {
-                text: `❌ *Failed to download audio*\n\nPlease try again later or try a different song.\n\nError: ${apiError?.message || 'All APIs failed'}`,
+                text: `❌ *Failed to download audio*
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+🎤 *Song:* ${title}
+👤 *Artist:* ${artist}
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ *You can still listen on YouTube:*
+
+🔗 ${videoUrl}
+
+━━━━━━━━━━━━━━━━━━━━━━
+✨ *NJABULO UI*`,
                 contextInfo: {
                     isForwarded: true,
                     forwardingScore: 999,
@@ -213,7 +230,7 @@ ${uploaded}
                     previewType: 0,
                     thumbnailUrl: thumbnail,
                     renderLargerThumbnail: true,
-                    sourceUrl: `https://youtu.be/${bestMatch.videoId}`,
+                    sourceUrl: videoUrl,
                 }
             }
         }, { quoted: mek });
@@ -251,8 +268,6 @@ ${uploaded}
         
         if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
             errorMessage += `⏰ *Request timeout*\n\nThe server took too long to respond.\n\nPlease try again in a few moments.`;
-        } else if (err.response?.status === 404) {
-            errorMessage += `🔍 *Song not found*\n\nPlease try a different song name.`;
         } else {
             errorMessage += `${err.message}\n\nPlease try again later.`;
         }
