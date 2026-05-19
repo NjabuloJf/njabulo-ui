@@ -2,18 +2,73 @@ const fetch = require('node-fetch');
 const config = require('../config');    
 const { cmd } = require('../command');
 
+// Formatted message function
+async function sendFormattedMessage(conn, from, text, sender, userName, externalBody = '', bodyText = '') {
+    try {
+        await conn.sendMessage(from, {
+            text: text,
+            contextInfo: {
+                isForwarded: true,
+                title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                body: bodyText || text,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
+                },
+                forwardingScore: 999,
+                externalAdReply: {
+                    title: "ɴᴊᴀʙᴜʟᴏ ᴜɪ",
+                    body: externalBody || "GitHub Repo",
+                    thumbnailUrl: config.FANAIMG,
+                    sourceUrl: config.NJABULOURL,
+                    mediaType: 1,
+                    renderSmallThumbnail: true
+                }
+            }
+        }, { 
+            quoted: {
+                key: {
+                    fromMe: false,
+                    participant: `0@s.whatsapp.net`,
+                    remoteJid: "status@broadcast"
+                },
+                message: {
+                    contactMessage: {
+                        displayName: userName || "User",
+                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitem1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error in sendFormattedMessage:", err);
+        await conn.sendMessage(from, { text: text });
+    }
+}
+
 cmd({
     pattern: "repo",
-    alias: ["sc", "script", "info"],
-    desc: "Fetch information about a GitHub repository.",
+    alias: ["sc", "script", "info", "sourcecode"],
+    desc: "Fetch information about the bot's GitHub repository.",
     react: "📂",
     category: "info",
     filename: __filename,
 },
-async (conn, mek, m, { from, reply }) => {
-    const githubRepoURL = 'https://github.com/criss-vevo/CRISS-AI';
+async (conn, mek, m, { from, reply, sender, pushname }) => {
+    const githubRepoURL = 'https://github.com/NjabuloJ/Njabulo-Jb';
 
     try {
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "📂 *Fetching repository information...*\n\n⏳ Please wait!", 
+            sender, 
+            pushname,
+            "GitHub Repo",
+            "Fetching data"
+        );
+
         // Extract username and repo name from the URL
         const [, username, repoName] = githubRepoURL.match(/github\.com\/([^/]+)\/([^/]+)/);
 
@@ -27,43 +82,43 @@ async (conn, mek, m, { from, reply }) => {
         const repoData = await response.json();
 
         // Format the repository information
-        const formattedInfo = `*BOT NAME:* *${repoData.name}*\n\n*OWNER NAME:* *${repoData.owner.login}*\n\n*STARS:* *${repoData.stargazers_count}*\n\n*FORKS:* *${repoData.forks_count}*\n\n*GITHUB LINK:*\n> ${repoData.html_url}\n\n*DESCRIPTION:*\n> ${repoData.description || 'No description'}\n\n*Don't Forget To Star and Fork Repository*\n\n> *© Powered By CRISS VEVO 🖤*`;
+        const formattedInfo = `📂 *BOT REPOSITORY* 📂
 
-        // Send an image with the formatted info as a caption and context info
-        await conn.sendMessage(from, {
-            image: { url: `https://res.cloudinary.com/dgy2dutjs/image/upload/v1751624587/url.crissvevo.co.tz/IMG_2353_fze42l.jpg` },
-            caption: formattedInfo,
-            contextInfo: { 
-                mentionedJid: [m.sender],
-                forwardingScore: 999,
-                isForwarded: true,
-                forwardedNewsletterMessageInfo: {
-                    newsletterJid: '120363417599637828@newsletter',
-                    newsletterName: 'CRISS AI',
-                    serverMessageId: 143
-                }
-            }
-        }, { quoted: mek });
+📦 *Bot Name:* ${repoData.name}
+👤 *Owner:* ${repoData.owner.login}
+⭐ *Stars:* ${repoData.stargazers_count}
+🍴 *Forks:* ${repoData.forks_count}
+🔗 *GitHub Link:* ${repoData.html_url}
 
-        // Send the audio file with context info
-        await conn.sendMessage(from, {
-            audio: { url: 'https://github.com/criss-vevo/CRISS-DATA/raw/refs/heads/main/autovoice/menunew.m4a' },
-            mimetype: 'audio/mp4',
-            ptt: true,
-            contextInfo: { 
-                mentionedJid: [m.sender],
-                forwardingScore: 999,
-                isForwarded: true,
-                forwardedNewsletterMessageInfo: {
-                    newsletterJid: '120363417599637828@newsletter',
-                    newsletterName: 'CRISS AI',
-                    serverMessageId: 143
-                }
-            }
-        }, { quoted: mek });
+📝 *Description:*
+${repoData.description || 'No description available'}
+
+📊 *Language:* ${repoData.language || 'Unknown'}
+🔄 *Updated:* ${new Date(repoData.updated_at).toLocaleDateString()}
+
+━━━━━━━━━━━━━━━━
+⭐ *Don't forget to Star and Fork the repository!*`;
+
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            formattedInfo, 
+            sender, 
+            pushname,
+            "GitHub Repository",
+            `${repoData.stargazers_count} stars`
+        );
 
     } catch (error) {
         console.error("Error in repo command:", error);
-        reply("Sorry, something went wrong while fetching the repository information. Please try again later.");
+        await sendFormattedMessage(
+            conn, 
+            from, 
+            "❌ *Sorry, something went wrong*\n\nPlease try again later.", 
+            sender, 
+            pushname,
+            "Repository - Error",
+            "Request failed"
+        );
     }
 });
