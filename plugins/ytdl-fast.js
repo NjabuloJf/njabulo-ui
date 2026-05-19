@@ -114,9 +114,6 @@ ${views}
 📅 *UPLOADED:* 
 ${uploaded}
 
-🔗 *WATCH ON YOUTUBE:*
-https://youtu.be/${bestMatch.videoId}
-
 ━━━━━━━━━━━━━━━━━━━━━━
 📥 *Downloading your song...*
 
@@ -133,14 +130,6 @@ https://youtu.be/${bestMatch.videoId}
                     newsletterJid: config.NEWSLETTER,
                     newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
                     serverMessageId: 143
-                },
-                externalAdReply: {
-                    title: title.length > 35 ? `${title.substring(0, 32)}...` : title,
-                    body: `🎵 By ${artist}`,
-                    mediaType: 1,
-                    thumbnailUrl: thumbnail,
-                    sourceUrl: `https://youtu.be/${bestMatch.videoId}`,
-                    renderLargerThumbnail: true
                 }
             }
         }, { quoted: mek });
@@ -150,51 +139,86 @@ https://youtu.be/${bestMatch.videoId}
         const randomReaction = reactionEmojis[Math.floor(Math.random() * reactionEmojis.length)];
         await conn.sendMessage(from, { react: { text: randomReaction, key: mek.key } });
 
-        // Download the audio
-        const apiURL = `https://noobs-api.top/dipto/ytDl3?link=${encodeURIComponent(bestMatch.videoId)}&format=mp3`;
+        // Try multiple APIs for audio download
+        let downloadUrl = null;
+        let apiError = null;
         
+        // API 1: noobs-api
         try {
-            const response = await axios.get(apiURL, { timeout: 30000 });
-            
-            if (response.status !== 200 || !response.data?.downloadLink) {
-                await conn.sendMessage(from, {
-                    text: "❌ *Failed to retrieve download link*\n\nPlease try again later.",
-                    contextInfo: {
-                        isForwarded: true,
-                        forwardingScore: 999,
-                        forwardedNewsletterMessageInfo: {
-                            newsletterJid: config.NEWSLETTER,
-                            newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
-                            serverMessageId: 143
-                        }
-                    }
-                }, { quoted: mek });
-                return;
+            const apiURL1 = `https://noobs-api.top/dipto/ytDl3?link=${encodeURIComponent(bestMatch.videoId)}&format=mp3`;
+            const response1 = await axios.get(apiURL1, { timeout: 20000 });
+            if (response1.status === 200 && response1.data?.downloadLink) {
+                downloadUrl = response1.data.downloadLink;
             }
-
-            const downloadUrl = response.data.downloadLink;
-            const safeTitle = title.replace(/[\\/:*?"<>|]/g, '');
-            const fileName = `${safeTitle} - ${artist}.mp3`;
-
-            // Send the audio file
+        } catch (err) {
+            console.log('API 1 failed:', err.message);
+            apiError = err;
+        }
+        
+        // API 2: Alternative API if first fails
+        if (!downloadUrl) {
+            try {
+                const apiURL2 = `https://api.davidcyriltech.my.id/download/ytmp3?url=https://youtu.be/${bestMatch.videoId}`;
+                const response2 = await axios.get(apiURL2, { timeout: 20000 });
+                if (response2.data?.success && response2.data?.result?.download_url) {
+                    downloadUrl = response2.data.result.download_url;
+                }
+            } catch (err) {
+                console.log('API 2 failed:', err.message);
+            }
+        }
+        
+        // API 3: Another alternative
+        if (!downloadUrl) {
+            try {
+                const apiURL3 = `https://api.siputzx.my.id/api/download/ytmp3?url=https://youtu.be/${bestMatch.videoId}`;
+                const response3 = await axios.get(apiURL3, { timeout: 20000 });
+                if (response3.data?.status && response3.data?.data?.download) {
+                    downloadUrl = response3.data.data.download;
+                }
+            } catch (err) {
+                console.log('API 3 failed:', err.message);
+            }
+        }
+        
+        if (!downloadUrl) {
             await conn.sendMessage(from, {
-                audio: { url: downloadUrl },
-                mimetype: 'audio/mpeg',
-                fileName: fileName,
+                text: `❌ *Failed to download audio*\n\nPlease try again later or try a different song.\n\nError: ${apiError?.message || 'All APIs failed'}`,
                 contextInfo: {
-                    externalAdReply: {
-                        title: title.length > 40 ? `${title.substring(0, 37)}...` : title,
-                        body: `🎵 By ${artist} • ${duration}`,
-                        mediaType: 1,
-                        previewType: 0,
-                        thumbnailUrl: thumbnail,
-                        renderLargerThumbnail: true,
-                        sourceUrl: `https://youtu.be/${bestMatch.videoId}`,
+                    isForwarded: true,
+                    forwardingScore: 999,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: config.NEWSLETTER,
+                        newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                        serverMessageId: 143
                     }
                 }
             }, { quoted: mek });
+            return;
+        }
 
-            const successMsg = `✅ *SONG DOWNLOADED!* ✅
+        const safeTitle = title.replace(/[\\/:*?"<>|]/g, '');
+        const fileName = `${safeTitle} - ${artist}.mp3`;
+
+        // Send the audio file
+        await conn.sendMessage(from, {
+            audio: { url: downloadUrl },
+            mimetype: 'audio/mpeg',
+            fileName: fileName,
+            contextInfo: {
+                externalAdReply: {
+                    title: title.length > 40 ? `${title.substring(0, 37)}...` : title,
+                    body: `🎵 By ${artist} • ${duration}`,
+                    mediaType: 1,
+                    previewType: 0,
+                    thumbnailUrl: thumbnail,
+                    renderLargerThumbnail: true,
+                    sourceUrl: `https://youtu.be/${bestMatch.videoId}`,
+                }
+            }
+        }, { quoted: mek });
+
+        const successMsg = `✅ *SONG DOWNLOADED!* ✅
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
@@ -205,45 +229,36 @@ https://youtu.be/${bestMatch.videoId}
 📅 *UPLOADED:* ${uploaded}
 
 ━━━━━━━━━━━━━━━━━━━━━━
-🎵 *File saved as:* 
-${fileName}
-
-━━━━━━━━━━━━━━━━━━━━━━
 ✨ *Enjoy your music!* ✨`;
 
-            await conn.sendMessage(from, {
-                text: successMsg,
-                contextInfo: {
-                    isForwarded: true,
-                    forwardingScore: 999,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: config.NEWSLETTER,
-                        newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
-                        serverMessageId: 143
-                    }
+        await conn.sendMessage(from, {
+            text: successMsg,
+            contextInfo: {
+                isForwarded: true,
+                forwardingScore: 999,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
+                    serverMessageId: 143
                 }
-            }, { quoted: mek });
-
-        } catch (err) {
-            console.error('[PLAY] API Error:', err);
-            await conn.sendMessage(from, {
-                text: `❌ *An error occurred*\n\n${err.message}\n\nPlease try again later.`,
-                contextInfo: {
-                    isForwarded: true,
-                    forwardingScore: 999,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: config.NEWSLETTER,
-                        newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
-                        serverMessageId: 143
-                    }
-                }
-            }, { quoted: mek });
-        }
+            }
+        }, { quoted: mek });
 
     } catch (err) {
         console.error('[PLAY] Error:', err);
+        
+        let errorMessage = `❌ *An error occurred*\n\n`;
+        
+        if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+            errorMessage += `⏰ *Request timeout*\n\nThe server took too long to respond.\n\nPlease try again in a few moments.`;
+        } else if (err.response?.status === 404) {
+            errorMessage += `🔍 *Song not found*\n\nPlease try a different song name.`;
+        } else {
+            errorMessage += `${err.message}\n\nPlease try again later.`;
+        }
+        
         await conn.sendMessage(from, {
-            text: `❌ *An error occurred*\n\n${err.message}\n\nPlease try again later.`,
+            text: errorMessage,
             contextInfo: {
                 isForwarded: true,
                 forwardingScore: 999,
