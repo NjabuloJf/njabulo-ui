@@ -141,7 +141,6 @@ async (conn, mek, m, { from, args, q, reply, sender, pushname }) => {
             await conn.sendMessage(from, {
                 audio: { url: downloadUrl },
                 mimetype: 'audio/mpeg',
-                ptt: true,
                 fileName: fileName,
                 contextInfo: {
                     externalAdReply: {
