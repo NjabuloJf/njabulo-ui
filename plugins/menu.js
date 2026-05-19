@@ -54,7 +54,8 @@ cmd({
 > ${config.DESCRIPTION}`;
 
         const sentMsg = await conn.sendMessage(from, {
-         text: menuCaption,
+         image: { url: config.MENU_IMAGE_URL},    
+         caption: menuCaption,
          contextInfo: {
                 isForwarded: true,
                 forwardedNewsletterMessageInfo: {
