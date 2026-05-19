@@ -56,7 +56,7 @@ cmd({
     filename: __filename,
 },
 async (conn, mek, m, { from, reply, sender, pushname }) => {
-    const githubRepoURL = 'https://github.com/NjabuloJ/Njabulo-Jb';
+    const githubRepoURL = 'https://github.com/NjabuloJf/Njabulo-Jb';
 
     try {
         await sendFormattedMessage(
@@ -101,33 +101,19 @@ ${repoData.description || 'No description available'}
 ▬▬▬▬▬▬▬▬▬▬ 
 ⭐ *Don't forget to Star and Fork the repository!*`;
 
-
-         await conn.sendMessage(from, { 
-         image: { url: config.FANAIMG},    
-         caption: formattedInfo,
-         contextInfo: {
+        await conn.sendMessage(from, { 
+            image: { url: config.FANAIMG },    
+            caption: formattedInfo,
+            contextInfo: {
                 isForwarded: true,
+                forwardingScore: 999,
                 forwardedNewsletterMessageInfo: {
                     newsletterJid: config.NEWSLETTER,
                     newsletterName: '╭••➤ɴᴊᴀʙᴜʟᴏ ᴜɪ',
                     serverMessageId: 143
-                },              
-            }
-        }, { 
-            quoted: {
-                key: {
-                    fromMe: false,
-                    participant: `0@s.whatsapp.net`,
-                    remoteJid: "status@broadcast"
-                },
-                message: {
-                    contactMessage: {
-                        displayName: userName || "User",
-                        vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${userName || "User"};USER;;;\nFN:${userName || "User"}\nitm1.TEL;waid=${sender?.split('@')[0] || '0'}:${sender?.split('@')[0] || '0'}\nitem1.X-ABLabel:User\nEND:VCARD`
-                    }
                 }
             }
-        });
+        }, { quoted: mek });
 
     } catch (error) {
         console.error("Error in repo command:", error);
