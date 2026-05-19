@@ -9,7 +9,7 @@ cmd({
     category: "menu",
     react: "🧾",
     filename: __filename
-}, async (conn, mek, m, { from, reply, sender, username, pushname }) => {
+}, async (conn, mek, m, { from, reply, sender, pushname, userName }) => {
     try {
         await conn.sendMessage(from, { react: { text: '⏳', key: mek.key } });
 
