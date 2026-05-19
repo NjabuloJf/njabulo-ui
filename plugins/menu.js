@@ -1,0 +1,607 @@
+const config = require('../config');
+const { cmd, commands } = require('../command');
+const os = require("os");
+const { runtime } = require('../lib/functions');
+
+cmd({
+    pattern: "menu",
+    desc: "Show interactive menu system",
+    category: "menu",
+    react: "🧾",
+    filename: __filename
+}, async (conn, mek, m, { from, reply, sender, pushname }) => {
+    try {
+        await conn.sendMessage(from, { react: { text: '⏳', key: mek.key } });
+
+        const now = new Date();
+        const hours = now.getHours();
+        let greeting = "good morning";
+        if (hours >= 12 && hours < 18) greeting = "good afternoon";
+        else if (hours >= 18) greeting = "good evening";
+
+        const totalCommands = 350;
+
+        const menuCaption = `*┌─❖*
+*│${config.BOT_NAME}*    
+*└┬❖*
+   *│🌆 ${greeting}*
+   *└────────┈❖*
+▬▬▬▬▬▬▬▬▬▬
+> 🕵️ ${pushname || sender.split('@')[0]}
+> 📅 ${now.toLocaleDateString()}
+> ⏰ ${now.toLocaleTimeString()}
+> ⭐ ${totalCommands} cmd
+▬▬▬▬▬▬▬▬▬▬
+
+*📋 MENU OPTIONS*
+1. DOWNLOAD MENU
+2. GROUP MENU
+3. REACTIONS MENU
+4. LOGO MAKER
+5. OWNER MENU
+6. FUN MENU
+7. CONVERT MENU
+8. AI MENU
+9. MAIN MENU
+10. ANIME MENU
+11. OTHER MENU
+12. PRIVACY MENU
+13. TOOLS MENU
+14. STICKER MENU
+15. SEARCH MENU
+
+▬▬▬▬▬▬▬▬▬▬
+> ${config.DESCRIPTION}`;
+
+        const sentMsg = await conn.sendMessage(from, {
+            text: menuCaption,
+            contextInfo: {
+                mentionedJid: [m.sender],
+                forwardingScore: 999,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.NEWSLETTER,
+                    newsletterName: config.BOT_NAME,
+                    serverMessageId: 143
+                }
+            }
+        }, { quoted: mek });
+
+        const messageID = sentMsg.key.id;
+
+        const menuData = {
+            '1': {
+                title: "DOWNLOAD MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     DOWNLOAD MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• facebook / fb / fbdl
+• mediafire / mfire
+• tiktok / tt / tiktokdl
+• twitter / twdl
+• instagram / insta
+• apk / apk2
+• img / image
+• tt2 / tiktok2
+• pinterest / pin
+• fb2
+• spotify
+• play / song
+• play2
+• audio
+• video / mp4
+• video2
+• ytmp3
+• ytmp4
+• gdrive
+• ssweb / screenshot
+• tiktoksearch / tiks
+• darama
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '2': {
+                title: "GROUP MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     GROUP MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• grouplink / invite
+• kickall / removemembers
+• kickall2 / removeall2
+• kickall3 / removeadmins
+• add
+• remove / kick
+• promote
+• demote
+• dismiss
+• revoke / resetlink
+• setgoodbye
+• setwelcome
+• delete / del
+• getpic / getpp
+• ginfo / groupinfo
+• disappear on
+• disappear off
+• disappear 7D,24H
+• allreq / requestlist
+• updategname / setname
+• updategdesc / setdesc
+• joinrequests
+• senddm
+• nikal
+• mute
+• unmute
+• lockgc
+• unlockgc
+• invite
+• tag / hidetag
+• tagall
+• tagadmins
+• out / removecc
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '3': {
+                title: "REACTIONS MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     REACTIONS MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• bully
+• cuddle
+• cry
+• hug
+• awoo
+• kiss
+• lick
+• pat
+• smug
+• bonk
+• yeet
+• blush
+• smile
+• wave
+• highfive
+• handhold
+• nom
+• bite
+• glomp
+• slap
+• kill
+• happy
+• wink
+• poke
+• dance
+• cringe
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '4': {
+                title: "LOGO MAKER",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     LOGO MAKER
+━━━━━━━━━━━━━━━━━━━━━━
+
+• neonlight
+• blackpink
+• dragonball
+• 3dcomic
+• america
+• naruto
+• sadgirl
+• clouds
+• futuristic
+• 3dpaper
+• eraser
+• sunset
+• leaf
+• galaxy
+• sans
+• boom
+• hacker
+• devilwings
+• nigeria
+• bulb
+• angelwings
+• zodiac
+• luxury
+• paint
+• frozen
+• castle
+• tatoo
+• valorant
+• bear
+• typography
+• birthday
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '5': {
+                title: "OWNER MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     OWNER MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• owner / creator
+• menu
+• menu2
+• vv / viewonce
+• listcmd
+• allmenu
+• repo
+• block
+• unblock
+• fullpp
+• setpp
+• restart
+• shutdown
+• update / upgrade
+• alive / ping
+• ping2
+• gjid
+• jid
+• env / settings
+• broadcast / bc
+• forward / bulkforward
+• savecontact / vcf
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '6': {
+                title: "FUN MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     FUN MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• shapar
+• rate
+• insult / roast
+• hack
+• ship / lovetest
+• character
+• pickup / pickupline
+• joke
+• hrt / heart
+• hpy / happy
+• syd / sad
+• anger / angry
+• shy
+• kiss
+• mon / moon
+• cunfuzed / confused
+• hand / handhold
+• nikal
+• hold
+• hug
+• hifi
+• poke
+• roll / dice
+• coinflip
+• rcolor
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '7': {
+                title: "CONVERT MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     CONVERT MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• sticker / s
+• sticker2
+• emix / emojimix
+• fancy / font
+• take / rename
+• tomp3 / toaudio
+• tts / speak
+• trt / translate
+• base64
+• unbase64
+• binary
+• dbinary
+• tiny / shorturl
+• urldecode
+• urlencode
+• repeat
+• ask
+• readmore / rm
+• topdf / makepdf
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '8': {
+                title: "AI MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     AI MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• ai / gpt
+• gpt3 / openai
+• gpt4
+• gptmini
+• meta
+• blackbox
+• luma
+• dj
+• khan
+• jawad
+• bing
+• imagine / flux
+• imagine2 / stablediffusion
+• copilot
+• deepseek
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '9': {
+                title: "MAIN MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     MAIN MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• ping
+• ping2
+• speed
+• live
+• alive
+• runtime
+• uptime
+• repo
+• owner
+• menu
+• menu2
+• restart
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '10': {
+                title: "ANIME MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     ANIME MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• fack
+• truth
+• dare
+• dog
+• awoo
+• garl
+• waifu
+• neko
+• megumin
+• maid
+• loli
+• animegirl
+• animegirl1
+• animegirl2
+• animegirl3
+• animegirl4
+• animegirl5
+• anime1
+• anime2
+• anime3
+• anime4
+• anime5
+• animenews
+• foxgirl
+• naruto
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '11': {
+                title: "OTHER MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     OTHER MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• timenow
+• date
+• count
+• calculate / calc
+• countx
+• flip / reverse
+• coinflip
+• rcolor / randomcolor
+• roll / dice
+• fact / funfact
+• cpp / couplepp
+• rw / randomwallpaper
+• pair
+• pair2
+• pair3
+• fancy
+• logo
+• define / dictionary
+• news / headlines
+• movie / imdb
+• weather / climate
+• srepo / repo
+• insult
+• save
+• wikipedia / wiki
+• gpass / password
+• githubstalk / ghstalk
+• yts / ytsearch
+• ytv / ytvideo
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '12': {
+                title: "PRIVACY MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     PRIVACY MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• antidelete / antidel
+• antilink / antilinks
+• antilinkkick / kicklink
+• deletelink / linksdelete
+• anti-bad / antibadword
+• auto-typing / autotyping
+• auto-recording / autorecoding
+• auto-seen / autostatusview
+• auto-voice / autovoice
+• auto-sticker / autosticker
+• auto-reply / autoreply
+• auto-react / autoreact
+• read-message / autoread
+• status-reply / autostatusreply
+• mention-reply / mee
+• setppall / profileprivacy
+• setonline / onlineprivacy
+• groupsprivacy / groupprivacy
+• getprivacy / viewprivacy
+• blocklist / blocked
+• getbio / userbio
+• getpp / fetchpp
+• admin-events / adminevents
+• welcome / welcomeset
+• setprefix / prefix
+• mode / setmode
+• always-online / alwaysonline
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '13': {
+                title: "TOOLS MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     TOOLS MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• tempnum / fakenum
+• templist / listnumbers
+• otpbox / checkotp
+• countryinfo / cinfo
+• weather / climate
+• movie / imdb
+• news / headlines
+• wikipedia / wiki
+• ytstalk / ytinfo
+• xstalk / twitterstalk
+• tiktokstalk / ttstalk
+• githubstalk / ghstalk
+• npm / npmpackage
+• timenow / time
+• date / currentdate
+• calculate / calc
+• count / countx
+• rcolor / randomcolor
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '14': {
+                title: "STICKER MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     STICKER MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• sticker / s
+• take / rename
+• emix / emojimix
+• attp / texttosticker
+• vsticker / videosticker
+• gsticker
+• convert / stickertoimage
+• s2i / stoimg
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            },
+            '15': {
+                title: "SEARCH MENU",
+                content: `━━━━━━━━━━━━━━━━━━━━━━
+     SEARCH MENU
+━━━━━━━━━━━━━━━━━━━━━━
+
+• yts / ytsearch
+• tiktoksearch / tiks
+• wikipedia / wiki
+• define / dictionary
+• movie / imdb
+• news / headlines
+• weather / climate
+• countryinfo / cinfo
+• ytstalk / ytinfo
+• xstalk / twitterstalk
+• tiktokstalk / ttstalk
+• githubstalk / ghstalk
+• npm / npmpackage
+
+━━━━━━━━━━━━━━━━━━━━━━
+> ${config.DESCRIPTION}`
+            }
+        };
+
+        const handler = async (msgData) => {
+            const receivedMsg = msgData.messages[0];
+            if (!receivedMsg?.message || !receivedMsg.key?.remoteJid) return;
+
+            const isReplyToMenu = receivedMsg.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
+            
+            if (isReplyToMenu) {
+                const receivedText = receivedMsg.message.conversation || 
+                                  receivedMsg.message.extendedTextMessage?.text;
+                const senderID = receivedMsg.key.remoteJid;
+
+                await conn.sendMessage(senderID, { react: { text: '⏳', key: receivedMsg.key } });
+
+                if (menuData[receivedText]) {
+                    const selectedMenu = menuData[receivedText];
+                    
+                    await conn.sendMessage(senderID, {
+                        text: selectedMenu.content,
+                        contextInfo: {
+                            mentionedJid: [m.sender],
+                            forwardingScore: 999,
+                            isForwarded: true,
+                            forwardedNewsletterMessageInfo: {
+                                newsletterJid: config.NEWSLETTER,
+                                newsletterName: config.BOT_NAME,
+                                serverMessageId: 143
+                            }
+                        }
+                    }, { quoted: receivedMsg });
+
+                    await conn.sendMessage(senderID, { react: { text: '✅', key: receivedMsg.key } });
+
+                } else if (receivedText >= 1 && receivedText <= 15) {
+                    await conn.sendMessage(senderID, {
+                        text: `Invalid Option!\n\nPlease reply with a number between 1-15 to select a menu.\n\nExample: Reply with "1" for Download Menu\n\n> ${config.DESCRIPTION}`,
+                        contextInfo: {
+                            mentionedJid: [m.sender],
+                            forwardingScore: 999,
+                            isForwarded: true
+                        }
+                    }, { quoted: receivedMsg });
+                    await conn.sendMessage(senderID, { react: { text: '❌', key: receivedMsg.key } });
+                }
+            }
+        };
+
+        conn.ev.on("messages.upsert", handler);
+
+        setTimeout(() => {
+            conn.ev.off("messages.upsert", handler);
+        }, 300000);
+
+    } catch (e) {
+        console.error('Menu Error:', e);
+        await conn.sendMessage(from, { react: { text: '❌', key: mek.key } });
+        reply(`Error: ${e.message}`);
+    }
+});
